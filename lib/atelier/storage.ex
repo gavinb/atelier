@@ -21,4 +21,18 @@ defmodule Atelier.Storage do
     Path.join([@storage_root, project_id, filename])
     |> File.read()
   end
+
+  def init_workspace(project_id) do
+    path = Path.expand("tmp/atelier_studio/#{project_id}")
+    File.mkdir_p!(path)
+
+    # Initialize git if it's not already there
+    if !File.dir?(Path.join(path, ".git")) do
+      System.cmd("git", ["init"], cd: path)
+      System.cmd("git", ["config", "user.name", "Atelier Bot"], cd: path)
+      System.cmd("git", ["config", "user.email", "bot@atelier.local"], cd: path)
+    end
+
+    path
+  end
 end
