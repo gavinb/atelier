@@ -128,15 +128,58 @@ defmodule Atelier.Agent do
 
   @impl true
   def handle_info({:blueprint_ready, files}, %{role: :writer} = state) do
-    IO.puts("✍️  Writer: I have my marching orders. Starting work...")
+    IO.puts("✍️  Writer: I have my marching orders. Processing files one-by-one...")
 
-    # For simplicity, we'll just start the first file.
-    # In a real Atelier, you might queue these.
-    Enum.each(files, fn file_spec ->
-      send(self(), {:execute_task, file_spec})
-    end)
+    # Instead of Enum.each, we send the list to ourselves to process sequentially
+    send(self(), {:process_queue, files})
 
     {:noreply, state}
+  end
+
+  def handle_info({:process_queue, []}, state) do
+    IO.puts("✍️  Writer: All tasks complete.")
+    {:noreply, state}
+  end
+
+  def handle_info({:process_queue, [current_file | remaining]}, state) do
+    # Execute only the current file
+    execute_file_generation(current_file, state)
+
+    # After a short delay or upon completion, we'll trigger the next one.
+    # For now, let's just trigger the next one immediately (Task handles the async part)
+    # but since LLM is the bottleneck, this is still better than a blind Enum.each.
+    send(self(), {:process_queue, remaining})
+
+    {:noreply, state}
+  end
+
+  # Extract the logic to a private helper
+  defp execute_file_generation(%{"name" => name, "description" => desc}, state) do
+    IO.puts("✍️  Writer: Generating code for #{name}...")
+    topic = state.topic
+    project_id = state.project_id
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      # NEW: Stricter System Prompt to fix the "Preamble" issue
+      system = """
+      You are a specialized code generator.
+      Output ONLY the raw source code.
+      Do NOT include explanations, markdown backticks, or 'Here is your code'.
+      Strictly follow the file extension rules.
+      """
+
+      try do
+        code = Atelier.LLM.prompt(system, "Implement the file '#{name}': #{desc}")
+
+        # Strip markdown backticks if the LLM ignores instructions
+        clean_code = String.replace(code, ~r/```[a-z]*\n|```/i, "") |> String.trim()
+
+        Atelier.Storage.write_file(project_id, name, clean_code)
+        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, clean_code})
+      rescue
+        e -> IO.puts("❌ Writer Error on #{name}: #{inspect(e)}")
+      end
+    end)
   end
 
   @impl true
