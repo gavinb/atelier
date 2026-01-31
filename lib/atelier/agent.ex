@@ -62,9 +62,16 @@ defmodule Atelier.Agent do
 
   # --- WRITER LOGIC ---
   # Triggered manually for now to simulate work
+  # lib/atelier/agent.ex
+
   @impl true
-  def handle_cast({:write_code, code}, state) when state.role == :writer do
-    IO.puts("✍️  Writer: Posting code to the whiteboard...")
+  def handle_cast({:write_code, filename, code}, state) when state.role == :writer do
+    IO.puts("✍️  Writer: Saving #{filename} to local storage...")
+
+    # Write to our tmp/ directory
+    Atelier.Storage.write_file(state.project_id, filename, code)
+
+    # Broadcast to the Auditor
     PubSub.broadcast(Atelier.PubSub, state.topic, {:code_ready, code})
     {:noreply, state}
   end

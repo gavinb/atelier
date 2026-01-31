@@ -15,9 +15,15 @@ defmodule Atelier.Studio do
     :ok
   end
 
-  def submit_work(project_id, code) do
-    # Find the writer for this specific project and give them work
+  def submit_work(project_id, filename, code) do
+    # Find the writer for this specific project
     pid = GenServer.whereis({:global, {project_id, :writer}})
-    GenServer.cast(pid, {:write_code, code})
+
+    if pid do
+      # Pass both the filename and the code
+      GenServer.cast(pid, {:write_code, filename, code})
+    else
+      {:error, :writer_not_found}
+    end
   end
 end
