@@ -9,10 +9,10 @@ defmodule Atelier.Application do
   def start(_type, _args) do
     children = [
       # 1. The message bus for our Agents
-      {Phoenix.PubSub, name: Factory.PubSub},
+      {Phoenix.PubSub, name: Atelier.PubSub},
 
       # 2. A DynamicSupervisor to spin up/down Agent teams on demand
-      {DynamicSupervisor, name: Factory.AgentSupervisor, strategy: :one_for_one}
+      {DynamicSupervisor, name: Atelier.AgentSupervisor, strategy: :one_for_one}
 
       # Starts a worker by calling: Atelier.Worker.start_link(arg)
       # {Atelier.Worker, arg}
