@@ -41,4 +41,13 @@ defmodule Atelier.LLM do
       receive_timeout: 60_000
     ).body["response"]
   end
+
+  def clean_code(text) do
+    # 1. Try to extract content between triple backticks
+    # 2. If no backticks, just trim the whitespace
+    case Regex.run(~r/```(?:[a-zA-Z0-9.\-+#]+)?\n?(.*?)```/s, text) do
+      [_, code] -> String.trim(code)
+      nil -> String.trim(text)
+    end
+  end
 end

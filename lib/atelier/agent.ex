@@ -126,13 +126,59 @@ defmodule Atelier.Agent do
     {:noreply, state}
   end
 
+  # --- WRITER: Receiving the Blueprint ---
   @impl true
   def handle_info({:blueprint_ready, files}, %{role: :writer} = state) do
-    IO.puts("✍️  Writer: I have my marching orders. Processing files one-by-one...")
+    IO.puts(
+      "✍️  Writer: Marching orders received. Processing #{length(files)} files sequentially..."
+    )
 
-    # Instead of Enum.each, we send the list to ourselves to process sequentially
-    send(self(), {:process_queue, files})
+    send(self(), {:process_next_task, files})
+    {:noreply, state}
+  end
 
+  # --- WRITER: The Recursive Queue ---
+  def handle_info({:process_next_task, []}, state) do
+    IO.puts("✍️  Writer: All tasks in blueprint completed.")
+    {:noreply, state}
+  end
+
+  def handle_info({:process_next_task, [task | remaining]}, state) do
+    %{"name" => name, "description" => desc} = task
+    IO.puts("✍️  Writer: Generating [#{name}]...")
+
+    # We still use a Task for the LLM call so the Writer process stays responsive,
+    # but we tell the Task to report back to the Writer when it's done.
+    parent = self()
+    topic = state.topic
+    project_id = state.project_id
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system = "You are a specialized code generator. Output ONLY raw source code. No talk."
+
+      try do
+        raw_response = Atelier.LLM.prompt(system, "Implement '#{name}': #{desc}")
+        clean_code = Atelier.LLM.clean_code(raw_response)
+
+        Atelier.Storage.write_file(project_id, name, clean_code)
+        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, clean_code, name})
+
+        # Tell the Writer to move to the next file
+        send(parent, {:task_complete, remaining})
+      rescue
+        e ->
+          IO.puts("❌ Writer: Failed [#{name}] - #{inspect(e)}")
+          # Continue anyway
+          send(parent, {:task_complete, remaining})
+      end
+    end)
+
+    {:noreply, state}
+  end
+
+  # --- WRITER: Moving to the next item ---
+  def handle_info({:task_complete, remaining}, state) do
+    send(self(), {:process_next_task, remaining})
     {:noreply, state}
   end
 
@@ -150,6 +196,85 @@ defmodule Atelier.Agent do
     # but since LLM is the bottleneck, this is still better than a blind Enum.each.
     send(self(), {:process_queue, remaining})
 
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:execute_task, %{"name" => name, "description" => desc}}, state) do
+    IO.puts("✍️  Writer: Generating code for #{name}...")
+
+    topic = state.topic
+    project_id = state.project_id
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system = "You are a specialized Elixir Writer. Implement the requested file."
+      code = Atelier.LLM.prompt(system, "Create the file '#{name}' which does: #{desc}")
+
+      # Save it locally
+      Atelier.Storage.write_file(project_id, name, code)
+
+      # Broadcast for the Auditor to check
+      PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, code})
+    end)
+
+    {:noreply, state}
+  end
+
+  # --- CLERK LOGIC ---
+  @impl true
+  def handle_info({:blueprint_ready, files}, %{role: :clerk} = state) do
+    content = """
+    # Project Manifest: #{state.project_id}
+
+    ## Planned Files
+    #{Enum.map(files, &"* **#{&1["name"]}**: #{&1["description"]}") |> Enum.join("\n")}
+
+    ## Progress
+    """
+
+    Atelier.Storage.write_file(state.project_id, "MANIFEST.md", content)
+    {:noreply, state}
+  end
+
+  def handle_info({:code_ready, _code}, %{role: :clerk} = state) do
+    # The Clerk sees code is ready and could update the manifest with stats
+    # or checkmarks. For now, we'll just log it.
+    IO.puts("📋 Clerk: Updating manifest with new code submission...")
+    {:noreply, state}
+  end
+
+  # --- VALIDATOR LOGIC ---
+  @impl true
+  def handle_info({:code_ready, _code, filename}, %{role: :validator} = state) do
+    IO.puts("🧪 Validator: Checking syntax for #{filename}...")
+
+    full_path = Path.expand("tmp/atelier_studio/#{state.project_id}/#{filename}")
+
+    # Determine the check command based on extension
+    result =
+      case Path.extname(filename) do
+        ".js" -> System.cmd("node", ["--check", full_path])
+        ".ex" -> System.cmd("elixirc", [full_path, "-o", "tmp/atelier_studio/build"])
+        ".py" -> System.cmd("python3", ["-m", "py_compile", full_path])
+        _ -> {:ok, "No validator for this file type"}
+      end
+
+    case result do
+      {_output, 0} ->
+        IO.puts("✅ Validator: #{filename} syntax is valid.")
+        PubSub.broadcast(Atelier.PubSub, state.topic, {:validation_passed, filename})
+
+      {error_msg, _exit_code} ->
+        IO.puts("❌ Validator: #{filename} has syntax errors!")
+        PubSub.broadcast(Atelier.PubSub, state.topic, {:validation_failed, filename, error_msg})
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    # Prefixed with _ to silence the unused variable warning
     {:noreply, state}
   end
 
@@ -180,57 +305,5 @@ defmodule Atelier.Agent do
         e -> IO.puts("❌ Writer Error on #{name}: #{inspect(e)}")
       end
     end)
-  end
-
-  @impl true
-  def handle_info({:execute_task, %{"name" => name, "description" => desc}}, state) do
-    IO.puts("✍️  Writer: Generating code for #{name}...")
-
-    topic = state.topic
-    project_id = state.project_id
-
-    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
-      system = "You are a specialized Elixir Writer. Implement the requested file."
-      code = Atelier.LLM.prompt(system, "Create the file '#{name}' which does: #{desc}")
-
-      # Save it locally
-      Atelier.Storage.write_file(project_id, name, code)
-
-      # Broadcast for the Auditor to check
-      PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, code})
-    end)
-
-    {:noreply, state}
-  end
-
-  # lib/atelier/agent.ex
-
-  # --- CLERK LOGIC ---
-  @impl true
-  def handle_info({:blueprint_ready, files}, %{role: :clerk} = state) do
-    content = """
-    # Project Manifest: #{state.project_id}
-
-    ## Planned Files
-    #{Enum.map(files, &"* **#{&1["name"]}**: #{&1["description"]}") |> Enum.join("\n")}
-
-    ## Progress
-    """
-
-    Atelier.Storage.write_file(state.project_id, "MANIFEST.md", content)
-    {:noreply, state}
-  end
-
-  def handle_info({:code_ready, _code}, %{role: :clerk} = state) do
-    # The Clerk sees code is ready and could update the manifest with stats
-    # or checkmarks. For now, we'll just log it.
-    IO.puts("📋 Clerk: Updating manifest with new code submission...")
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(_msg, state) do
-    # Prefixed with _ to silence the unused variable warning
-    {:noreply, state}
   end
 end
