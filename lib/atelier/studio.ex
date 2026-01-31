@@ -1,7 +1,7 @@
 defmodule Atelier.Studio do
   def start_project(project_id) do
     # Add Architect, Writer, and Auditor
-    roles = [:architect, :writer, :auditor]
+    roles = [:architect, :writer, :auditor, :clerk]
 
     Enum.each(roles, fn role ->
       DynamicSupervisor.start_child(

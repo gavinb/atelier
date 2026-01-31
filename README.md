@@ -19,3 +19,14 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/atelier>.
 
+# Testing
+
+To test locally, ensure `ollama` is running then:
+
+```
+% iex -S mix
+
+Atelier.Studio.start_project("vibe-store")
+
+Atelier.Studio.request_feature("vibe-store", "A simple shopping cart module with add and remove functions")
+```

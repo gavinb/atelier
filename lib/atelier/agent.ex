@@ -160,6 +160,31 @@ defmodule Atelier.Agent do
     {:noreply, state}
   end
 
+  # lib/atelier/agent.ex
+
+  # --- CLERK LOGIC ---
+  @impl true
+  def handle_info({:blueprint_ready, files}, %{role: :clerk} = state) do
+    content = """
+    # Project Manifest: #{state.project_id}
+
+    ## Planned Files
+    #{Enum.map(files, &"* **#{&1["name"]}**: #{&1["description"]}") |> Enum.join("\n")}
+
+    ## Progress
+    """
+
+    Atelier.Storage.write_file(state.project_id, "MANIFEST.md", content)
+    {:noreply, state}
+  end
+
+  def handle_info({:code_ready, _code}, %{role: :clerk} = state) do
+    # The Clerk sees code is ready and could update the manifest with stats
+    # or checkmarks. For now, we'll just log it.
+    IO.puts("📋 Clerk: Updating manifest with new code submission...")
+    {:noreply, state}
+  end
+
   @impl true
   def handle_info(_msg, state) do
     # Prefixed with _ to silence the unused variable warning
