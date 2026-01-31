@@ -28,11 +28,13 @@ defmodule Atelier.LLM do
   defp call_ollama(system, user) do
     # Ollama uses a single prompt string or a chat list.
     # For a simple prompt, we can use /api/generate
+    model = Application.get_env(:atelier, :ollama_model, "llama3")
+
     full_prompt = "System: #{system}\n\nUser: #{user}"
 
     Req.post!("http://localhost:11434/api/generate",
       json: %{
-        model: "llama3",
+        model: model,
         prompt: full_prompt,
         stream: false
       }
