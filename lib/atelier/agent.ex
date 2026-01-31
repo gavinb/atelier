@@ -72,18 +72,34 @@ defmodule Atelier.Agent do
   # --- AUDITOR LOGIC ---
   @impl true
   def handle_info({:code_ready, code}, %{role: :auditor} = state) do
-    IO.puts("🔍 Auditor: Received new code. Running Rust scanner...")
+    IO.puts("🔍 Auditor: Running infra-scan...")
 
-    # Call the Rust NIF
-    case Atelier.Native.Scanner.scan_code(code, ["API_KEY", "TODO"]) do
+    case Atelier.Native.Scanner.scan_code(code, ["TODO", "FIXME"]) do
       {true, _} ->
-        IO.puts("✅ Auditor: Code is clean.")
+        IO.puts("✅ Auditor: Clean!")
 
       {false, issues} ->
-        IO.puts("❌ Auditor: Found issues: #{inspect(issues)}. Requesting revision...")
-        PubSub.broadcast(Atelier.PubSub, state.topic, {:revision_requested, issues})
+        IO.puts("⚠️ Auditor: Rust found issues #{inspect(issues)}. Asking Claude for a fix...")
+
+        # The "Brain" part
+        instructions =
+          "You are a senior code reviewer. The user has forbidden patterns: #{inspect(issues)}."
+
+        user_query = "Fix this code and return ONLY the code: \n\n #{code}"
+
+        suggestion = Atelier.LLM.prompt(instructions, user_query)
+
+        # Broadcast the fix back to the project whiteboard
+        PubSub.broadcast(Atelier.PubSub, state.topic, {:suggestion_offered, suggestion})
     end
 
+    {:noreply, state}
+  end
+
+  # The Writer now needs to listen for suggestions!
+  def handle_info({:suggestion_offered, suggestion}, %{role: :writer} = state) do
+    IO.puts("✍️ Writer: Received a fix from the Auditor. Applying...")
+    # In a real app, this would update the file in our local storage
     {:noreply, state}
   end
 
