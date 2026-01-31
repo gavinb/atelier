@@ -3,14 +3,19 @@ defmodule Atelier.Agents.GitBot do
   GitBot agent responsible for auto-committing validated code.
   """
 
+  require Logger
+
   def handle_cast(_msg, state), do: {:noreply, state}
 
   def handle_info({:validation_passed, filename}, state) do
     IO.puts("📦 GitBot: #{filename} passed validation. Preparing commit...")
+    Logger.info("Validation passed, preparing commit", filename: filename, project_id: state.project_id)
 
     project_path = Path.expand("tmp/atelier_studio/#{state.project_id}")
 
     Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      Logger.debug("Starting commit task", filename: filename, project_path: project_path)
+      
       # 1. Ask the LLM for a sensible commit message
       {:ok, code} = Atelier.Storage.read_file(state.project_id, filename)
 
@@ -20,17 +25,29 @@ defmodule Atelier.Agents.GitBot do
       Return ONLY the commit message text.
       """
 
+      Logger.debug("Requesting commit message from LLM", filename: filename)
       commit_msg = Atelier.LLM.prompt("You are a Git expert.", prompt) |> String.trim()
+      Logger.debug("Commit message generated", message: commit_msg)
 
       # 2. Execute the Git commands
       # We use 'cd' in System.cmd to ensure we're in the right folder
       try do
-        System.cmd("git", ["add", filename], cd: project_path)
-        System.cmd("git", ["commit", "-m", commit_msg], cd: project_path)
+        Logger.debug("Running git add", filename: filename)
+        {_output, status1} = System.cmd("git", ["add", filename], cd: project_path)
+        
+        Logger.debug("Running git commit", message: commit_msg)
+        {_output, status2} = System.cmd("git", ["commit", "-m", commit_msg], cd: project_path)
 
-        IO.puts("🚀 GitBot: Committed #{filename} with message: \"#{commit_msg}\"")
+        if status1 == 0 and status2 == 0 do
+          IO.puts("🚀 GitBot: Committed #{filename} with message: \"#{commit_msg}\"")
+          Logger.info("File successfully committed", filename: filename, message: commit_msg)
+        else
+          Logger.error("Git commands failed", filename: filename, add_status: status1, commit_status: status2)
+        end
       rescue
-        e -> IO.puts("❌ GitBot: Failed to commit. Is Git initialized? #{inspect(e)}")
+        e ->
+          IO.puts("❌ GitBot: Failed to commit. Is Git initialized? #{inspect(e)}")
+          Logger.error("Commit failed with exception", filename: filename, error: inspect(e))
       end
     end)
 

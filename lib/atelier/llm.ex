@@ -1,28 +1,44 @@
 defmodule Atelier.LLM do
+  require Logger
+
   @doc "Main entry point to talk to any LLM"
   def prompt(system_instructions, user_input, opts \\ []) do
     provider = opts[:provider] || Application.get_env(:atelier, :llm_provider, :ollama)
 
-    case provider do
+    Logger.debug("Sending LLM prompt", provider: provider, input_length: String.length(user_input))
+    
+    result = case provider do
       :anthropic -> call_anthropic(system_instructions, user_input)
       :ollama -> call_ollama(system_instructions, user_input)
     end
+
+    Logger.debug("Received LLM response", provider: provider, response_length: String.length(result))
+    result
   end
 
   defp call_anthropic(system, user) do
     api_key = System.get_env("ANTHROPIC_API_KEY")
+    Logger.debug("Calling Anthropic API")
 
-    Req.post!("https://api.anthropic.com/v1/messages",
-      headers: [{"x-api-key", api_key}, {"anthropic-version", "2023-06-01"}],
-      json: %{
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1024,
-        system: system,
-        messages: [%{role: "user", content: user}]
-      }
-    ).body["content"]
-    |> List.first()
-    |> Map.get("text")
+    try do
+      response = Req.post!("https://api.anthropic.com/v1/messages",
+        headers: [{"x-api-key", api_key}, {"anthropic-version", "2023-06-01"}],
+        json: %{
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 1024,
+          system: system,
+          messages: [%{role: "user", content: user}]
+        }
+      )
+      
+      text = response.body["content"] |> List.first() |> Map.get("text")
+      Logger.debug("Anthropic response received")
+      text
+    rescue
+      e ->
+        Logger.error("Anthropic API call failed", error: inspect(e))
+        raise e
+    end
   end
 
   defp call_ollama(system, user) do
@@ -30,16 +46,27 @@ defmodule Atelier.LLM do
     # For a simple prompt, we can use /api/generate
     model = Application.get_env(:atelier, :ollama_model, "llama3")
 
+    Logger.debug("Calling Ollama API", model: model)
     full_prompt = "System: #{system}\n\nUser: #{user}"
 
-    Req.post!("http://localhost:11434/api/generate",
-      json: %{
-        model: model,
-        prompt: full_prompt,
-        stream: false
-      },
-      receive_timeout: 60_000
-    ).body["response"]
+    try do
+      response = Req.post!("http://localhost:11434/api/generate",
+        json: %{
+          model: model,
+          prompt: full_prompt,
+          stream: false
+        },
+        receive_timeout: 60_000
+      )
+      
+      text = response.body["response"]
+      Logger.debug("Ollama response received", model: model)
+      text
+    rescue
+      e ->
+        Logger.error("Ollama API call failed", error: inspect(e), model: model)
+        raise e
+    end
   end
 
   def clean_code(text) do

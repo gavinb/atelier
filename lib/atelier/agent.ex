@@ -4,6 +4,7 @@ defmodule Atelier.Agent do
   """
 
   use GenServer
+  require Logger
   alias Phoenix.PubSub
 
   def start_link(opts) do
@@ -18,17 +19,30 @@ defmodule Atelier.Agent do
     topic = "project:#{project_id}"
     PubSub.subscribe(Atelier.PubSub, topic)
 
+    Logger.info("Agent initialized", role: role, project_id: project_id)
     IO.puts("✨ Agent [#{role}] joined Atelier for #{project_id}")
 
     # Map roles to their specific implementation modules
     module =
       case role do
-        :architect -> Atelier.Agents.Architect
-        :writer -> Atelier.Agents.Writer
-        :auditor -> Atelier.Agents.Auditor
-        :validator -> Atelier.Agents.Validator
-        :git_bot -> Atelier.Agents.GitBot
-        :clerk -> Atelier.Agents.Clerk
+        :architect ->
+          Logger.debug("Mapping role to Architect implementation")
+          Atelier.Agents.Architect
+        :writer ->
+          Logger.debug("Mapping role to Writer implementation")
+          Atelier.Agents.Writer
+        :auditor ->
+          Logger.debug("Mapping role to Auditor implementation")
+          Atelier.Agents.Auditor
+        :validator ->
+          Logger.debug("Mapping role to Validator implementation")
+          Atelier.Agents.Validator
+        :git_bot ->
+          Logger.debug("Mapping role to GitBot implementation")
+          Atelier.Agents.GitBot
+        :clerk ->
+          Logger.debug("Mapping role to Clerk implementation")
+          Atelier.Agents.Clerk
       end
 
     {:ok,
@@ -44,12 +58,14 @@ defmodule Atelier.Agent do
   # Delegate all casts to the role-specific module
   @impl true
   def handle_cast(msg, state) do
+    Logger.debug("Delegating cast message", role: state.role, message_type: elem(msg, 0))
     state.module.handle_cast(msg, state)
   end
 
   # Delegate all infos to the role-specific module
   @impl true
   def handle_info(msg, state) do
+    Logger.debug("Delegating info message", role: state.role, message_type: elem(msg, 0))
     state.module.handle_info(msg, state)
   end
 end
