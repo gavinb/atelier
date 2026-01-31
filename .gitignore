@@ -24,3 +24,6 @@ atelier-*.tar
 
 # Rust binary artifacts
 /target/
+
+# Compiled NIF libraries
+/priv/native/
