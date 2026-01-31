@@ -1,29 +1,20 @@
 defmodule Atelier.Studio do
   def start_project(project_id) do
-    # Add a Writer
-    DynamicSupervisor.start_child(
-      Atelier.AgentSupervisor,
-      {Atelier.Agent, [role: :writer, project_id: project_id]}
-    )
+    # Add Architect, Writer, and Auditor
+    roles = [:architect, :writer, :auditor]
 
-    # Add an Auditor
-    DynamicSupervisor.start_child(
-      Atelier.AgentSupervisor,
-      {Atelier.Agent, [role: :auditor, project_id: project_id]}
-    )
+    Enum.each(roles, fn role ->
+      DynamicSupervisor.start_child(
+        Atelier.AgentSupervisor,
+        {Atelier.Agent, [role: role, project_id: project_id]}
+      )
+    end)
 
     :ok
   end
 
-  def submit_work(project_id, filename, code) do
-    # Find the writer for this specific project
-    pid = GenServer.whereis({:global, {project_id, :writer}})
-
-    if pid do
-      # Pass both the filename and the code
-      GenServer.cast(pid, {:write_code, filename, code})
-    else
-      {:error, :writer_not_found}
-    end
+  def request_feature(project_id, requirement) do
+    pid = GenServer.whereis({:global, {project_id, :architect}})
+    GenServer.cast(pid, {:design_spec, requirement})
   end
 end

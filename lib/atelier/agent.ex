@@ -37,6 +37,36 @@ defmodule Atelier.Agent do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_cast({:design_spec, requirement}, state) when state.role == :architect do
+    IO.puts("📐 Architect: Designing system for: #{requirement}")
+
+    topic = state.topic
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system = """
+      You are a Senior Architect. Break the user's request into a list of files.
+      Output ONLY valid JSON in this format:
+      {"files": [{"name": "filename.ex", "description": "what it does"}]}
+      """
+
+      # Use the LLM to create the blueprint
+      blueprint_raw = Atelier.LLM.prompt(system, requirement)
+
+      # Parse the JSON (Assuming Jason is in your mix.exs)
+      case Jason.decode(blueprint_raw) do
+        {:ok, %{"files" => files}} ->
+          IO.puts("📐 Architect: Blueprint ready with #{length(files)} files.")
+          PubSub.broadcast(Atelier.PubSub, topic, {:blueprint_ready, files})
+
+        _ ->
+          IO.puts("❌ Architect: Failed to generate valid JSON blueprint.")
+      end
+    end)
+
+    {:noreply, state}
+  end
+
   # --- ALL INFOS GO HERE ---
   @impl true
   def handle_info({:code_ready, code}, %{role: :auditor} = state) do
@@ -88,8 +118,43 @@ defmodule Atelier.Agent do
   end
 
   @impl true
+  def handle_info({:blueprint_ready, files}, %{role: :writer} = state) do
+    IO.puts("✍️  Writer: I have my marching orders. Starting work...")
+
+    # For simplicity, we'll just start the first file.
+    # In a real Atelier, you might queue these.
+    Enum.each(files, fn file_spec ->
+      send(self(), {:execute_task, file_spec})
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:execute_task, %{"name" => name, "description" => desc}}, state) do
+    IO.puts("✍️  Writer: Generating code for #{name}...")
+
+    topic = state.topic
+    project_id = state.project_id
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system = "You are a specialized Elixir Writer. Implement the requested file."
+      code = Atelier.LLM.prompt(system, "Create the file '#{name}' which does: #{desc}")
+
+      # Save it locally
+      Atelier.Storage.write_file(project_id, name, code)
+
+      # Broadcast for the Auditor to check
+      PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, code})
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(_msg, state) do
     # Prefixed with _ to silence the unused variable warning
     {:noreply, state}
   end
+
 end
