@@ -199,6 +199,48 @@ defmodule Atelier.Agent do
     {:noreply, state}
   end
 
+  # lib/atelier/agent.ex
+
+  # --- WRITER: Handling Validation Failure ---
+  def handle_info({:validation_failed, filename, error_msg}, state) when state.role == :writer do
+    IO.puts("🩹 Writer: My code for #{filename} failed validation. Attempting a fix...")
+
+    topic = state.topic
+    project_id = state.project_id
+
+    # We read what we last wrote to provide context to the LLM
+    {:ok, current_code} = Atelier.Storage.read_file(project_id, filename)
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system = "You are a debugger. Fix the provided code based on the compiler error."
+
+      prompt = """
+      File: #{filename}
+      Error: #{error_msg}
+
+      Current Code:
+      #{current_code}
+
+      Please provide the corrected version. Output ONLY the code.
+      """
+
+      try do
+        raw_response = Atelier.LLM.prompt(system, prompt)
+        fixed_code = Atelier.LLM.clean_code(raw_response)
+
+        # Overwrite the bad file with the fix
+        Atelier.Storage.write_file(project_id, filename, fixed_code)
+
+        # Re-broadcast to trigger the Auditor and Validator again
+        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, fixed_code, filename})
+      rescue
+        e -> IO.puts("❌ Writer: Auto-fix failed for #{filename}: #{inspect(e)}")
+      end
+    end)
+
+    {:noreply, state}
+  end
+
   @impl true
   def handle_info({:execute_task, %{"name" => name, "description" => desc}}, state) do
     IO.puts("✍️  Writer: Generating code for #{name}...")
