@@ -37,7 +37,8 @@ defmodule Atelier.LLM do
         model: model,
         prompt: full_prompt,
         stream: false
-      }
+      },
+      receive_timeout: 60_000
     ).body["response"]
   end
 end
