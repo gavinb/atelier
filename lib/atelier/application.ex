@@ -12,8 +12,10 @@ defmodule Atelier.Application do
       {Phoenix.PubSub, name: Atelier.PubSub},
 
       # 2. A DynamicSupervisor to spin up/down Agent teams on demand
-      {DynamicSupervisor, name: Atelier.AgentSupervisor, strategy: :one_for_one}
+      {DynamicSupervisor, name: Atelier.AgentSupervisor, strategy: :one_for_one},
 
+      # 3. Task supervisor for async LLM calls
+      {Task.Supervisor, name: Atelier.LLMTaskSupervisor}
       # Starts a worker by calling: Atelier.Worker.start_link(arg)
       # {Atelier.Worker, arg}
     ]

@@ -1,7 +1,7 @@
 import Config
 
 # Default to local development
-config :atelier, 
+config :atelier,
   llm_provider: :ollama,
   ollama_model: "llama3"
 

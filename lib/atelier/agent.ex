@@ -15,12 +15,13 @@ defmodule Atelier.Agent do
 
     IO.puts("✨ Agent [#{opts[:role]}] joined Atelier for #{project_id}")
 
-    {:ok, %{
-      role: opts[:role],
-      project_id: project_id,
-      topic: topic,
-      memory: []
-    }}
+    {:ok,
+     %{
+       role: opts[:role],
+       project_id: project_id,
+       topic: topic,
+       memory: []
+     }}
   end
 
   # --- ALL CASTS GO HERE ---
@@ -46,16 +47,34 @@ defmodule Atelier.Agent do
         IO.puts("✅ Auditor: Clean!")
 
       {false, issues} ->
-        IO.puts("⚠️  Auditor: Rust found issues #{inspect(issues)}. Asking LLM for a fix...")
+        IO.puts("⚠️  Auditor: Issues found. Spawning async LLM task...")
 
-        instructions = "You are a senior code reviewer. The user has forbidden patterns: #{inspect(issues)}."
-        user_query = "Fix this code and return ONLY the code: \n\n #{code}"
+        # We capture the state needed so the task has context
+        topic = state.topic
 
-        # This might take a second if Ollama is cold-starting
-        suggestion = Atelier.LLM.prompt(instructions, user_query)
+        Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+          try do
+            instructions = "Senior reviewer. Forbidden: #{inspect(issues)}."
+            user_query = "Fix this and return ONLY code: \n\n #{code}"
 
-        PubSub.broadcast(Atelier.PubSub, state.topic, {:suggestion_offered, suggestion})
+            # This call is now async!
+            suggestion = Atelier.LLM.prompt(instructions, user_query)
+
+            PubSub.broadcast(Atelier.PubSub, topic, {:suggestion_offered, suggestion})
+          rescue
+            e ->
+              IO.puts("❌ Auditor Error: LLM request failed. Is Ollama running? (#{inspect(e)})")
+              PubSub.broadcast(Atelier.PubSub, topic, {:llm_error, "Service unavailable"})
+          end
+        end)
     end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:llm_error, reason}, state) do
+    IO.puts("⚠️  Agent [#{state.role}]: Notified of LLM failure: #{reason}")
     {:noreply, state}
   end
 
