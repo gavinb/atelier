@@ -66,13 +66,16 @@ defmodule Atelier.Agent do
 
   @impl true
   def handle_cast({:write_code, filename, code}, state) when state.role == :writer do
-    IO.puts("✍️  Writer: Saving #{filename} to local storage...")
+    # Use the state.project_id we stored during init
+    case Atelier.Storage.write_file(state.project_id, filename, code) do
+      {:ok, full_path} ->
+        IO.puts("✍️  Writer: Saved to #{full_path}")
+        PubSub.broadcast(Atelier.PubSub, state.topic, {:code_ready, code})
 
-    # Write to our tmp/ directory
-    Atelier.Storage.write_file(state.project_id, filename, code)
+      {:error, reason} ->
+        IO.puts("❌ Writer: Failed to save file: #{inspect(reason)}")
+    end
 
-    # Broadcast to the Auditor
-    PubSub.broadcast(Atelier.PubSub, state.topic, {:code_ready, code})
     {:noreply, state}
   end
 
