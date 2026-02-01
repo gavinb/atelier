@@ -307,6 +307,6 @@ defmodule Atelier.Agents.Writer do
       end
     end)
 
-    {:noreply, state}
+    :ok
   end
 end

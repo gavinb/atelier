@@ -1,5 +1,11 @@
 defmodule Atelier.Agents.Researcher do
+  @moduledoc """
+  Researcher agent responsible for performing web searches for the Architect.
+  """
+
   require Logger
+
+  @behaviour Atelier.Agent.Worker
 
   def init_state(opts) do
     %{

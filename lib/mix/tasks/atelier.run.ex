@@ -56,13 +56,13 @@ defmodule Mix.Tasks.Atelier.Run do
       {:project_update, %{status: :failed, error: reason}} ->
         IO.puts("\n❌ Project failed: #{reason}")
 
-      {:execution_success, output} ->
-        IO.puts("\n🚀 --- RUNTIME OUTPUT ---")
+      {:execution_success, filename, output} ->
+        IO.puts("\n🚀 --- RUNTIME OUTPUT (#{filename}) ---")
         IO.puts(IO.ANSI.green() <> output <> IO.ANSI.reset())
         wait_for_completion(project_id)
 
-      {:execution_failure, output} ->
-        IO.puts("\n💥 --- RUNTIME CRASH ---")
+      {:execution_failure, filename, output} ->
+        IO.puts("\n💥 --- RUNTIME CRASH (#{filename}) ---")
         IO.puts(IO.ANSI.red() <> output <> IO.ANSI.reset())
         wait_for_completion(project_id)
 

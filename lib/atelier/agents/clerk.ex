@@ -44,12 +44,12 @@ defmodule Atelier.Agents.Clerk do
   def handle_info({:validation_passed, filename}, state) do
     remaining = List.delete(state.pending_files, filename)
 
+    # Always broadcast :file_validated so GitBot and Runner process every file
+    Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, {:file_validated, filename})
+
     if Enum.empty?(remaining) do
       Logger.info("🏁 Project Complete: All files generated, validated, and committed.")
       Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, :project_finished)
-    else
-      # Project is not done yet, notify agents to process this validated file
-      Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, {:file_validated, filename})
     end
 
     {:noreply, %{state | pending_files: remaining}}

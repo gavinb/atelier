@@ -2,7 +2,9 @@ defmodule Atelier.Studio do
   require Logger
 
   def start_project(project_id) do
-    # Add Architect, Writer, and Auditor
+    # Initialize workspace with git repository before starting agents
+    Atelier.Storage.init_workspace(project_id)
+
     roles = [
       :environment,
       :architect,

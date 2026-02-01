@@ -46,15 +46,6 @@ defmodule Atelier.Agents.GitBot do
     execute_git_commit(filename, project_path, commit_msg)
   end
 
-  defp ensure_git_initialized(project_path) do
-    git_dir = Path.join(project_path, ".git")
-
-    unless File.exists?(git_dir) do
-      Logger.info("Initializing git repository", project_path: project_path)
-      {_output, 0} = System.cmd("git", ["init"], cd: project_path, stderr_to_stdout: true)
-    end
-  end
-
   defp generate_commit_message(filename, code) do
     prompt = """
     Generate a concise, professional Git commit message for this file: #{filename}.
@@ -70,8 +61,6 @@ defmodule Atelier.Agents.GitBot do
 
   defp execute_git_commit(filename, project_path, commit_msg) do
     try do
-      ensure_git_initialized(project_path)
-
       Logger.debug("Running git add", filename: filename)
 
       {add_output, status1} =

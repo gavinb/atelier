@@ -1,5 +1,11 @@
 defmodule Atelier.Agents.Analyst do
+  @moduledoc """
+  Analyst agent responsible for collecting failures and generating post-mortem reports.
+  """
+
   require Logger
+
+  @behaviour Atelier.Agent.Worker
 
   def init_state(opts) do
     %{
