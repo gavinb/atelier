@@ -124,42 +124,60 @@ defmodule Atelier.Agents.Writer do
 
   # Handling Validation Failure
   def handle_info({:validation_failed, filename, error_msg}, state) do
-    IO.puts("🩹 Writer: My code for #{filename} failed validation. Attempting a fix...")
+    current_attempts = Map.get(state.retries, filename, 0)
 
-    topic = state.topic
-    project_id = state.project_id
+    if current_attempts < state.max_retries do
+      new_attempts = current_attempts + 1
 
-    # We read what we last wrote to provide context to the LLM
-    {:ok, current_code} = Atelier.Storage.read_file(project_id, filename)
+      IO.puts(
+        "🩹 Writer: My code for #{filename} failed validation. Attempting fix #{new_attempts}/#{state.max_retries}..."
+      )
 
-    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
-      system = "You are a debugger. Fix the provided code based on the compiler error."
+      topic = state.topic
+      project_id = state.project_id
 
-      prompt = """
-      File: #{filename}
-      Error: #{error_msg}
+      # We read what we last wrote to provide context to the LLM
+      {:ok, current_code} = Atelier.Storage.read_file(project_id, filename)
 
-      Current Code:
-      #{current_code}
+      Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+        system = "You are a debugger. Fix the provided code based on the compiler error."
 
-      Please provide the corrected version. Output ONLY the code.
-      """
+        prompt = """
+        File: #{filename}
+        Error: #{error_msg}
 
-      try do
-        raw_response = Atelier.LLM.prompt(system, prompt)
-        fixed_code = Atelier.LLM.clean_code(raw_response)
+        Current Code:
+        #{current_code}
 
-        # Overwrite the bad file with the fix
-        Atelier.Storage.write_file(project_id, filename, fixed_code)
+        Please provide the corrected version. Output ONLY the code.
+        """
 
-        # Re-broadcast to trigger the Auditor and Validator again
-        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, fixed_code, filename})
-      rescue
-        e -> IO.puts("❌ Writer: Auto-fix failed for #{filename}: #{inspect(e)}")
-      end
-    end)
+        try do
+          raw_response = Atelier.LLM.prompt(system, prompt)
+          fixed_code = Atelier.LLM.clean_code(raw_response)
 
-    {:noreply, state}
+          # Overwrite the bad file with the fix
+          Atelier.Storage.write_file(project_id, filename, fixed_code)
+
+          # Re-broadcast to trigger the Auditor and Validator again
+          PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, fixed_code, filename})
+        rescue
+          e -> IO.puts("❌ Writer: Auto-fix failed for #{filename}: #{inspect(e)}")
+        end
+      end)
+
+      {:noreply, %{state | retries: Map.put(state.retries, filename, new_attempts)}}
+    else
+      Logger.error("[Writer] Max retries reached for #{filename}. Surrendering to human.")
+
+      Phoenix.PubSub.broadcast(
+        Atelier.PubSub,
+        state.topic,
+        {:agent_surrender, filename, error_msg}
+      )
+
+      {:noreply, state}
+    end
   end
 
   def handle_info({:execute_task, %{"name" => name, "description" => desc}}, state) do
@@ -209,6 +227,11 @@ defmodule Atelier.Agents.Writer do
 
   def handle_info({:execution_success, filename, _output}, state) do
     Logger.info("[Writer] Success confirmed for #{filename}. Resetting retry counter.")
+    {:noreply, %{state | retries: Map.delete(state.retries, filename)}}
+  end
+
+  def handle_info({:validation_passed, filename}, state) do
+    Logger.info("[Writer] Validation passed for #{filename}. Resetting retry counter.")
     {:noreply, %{state | retries: Map.delete(state.retries, filename)}}
   end
 

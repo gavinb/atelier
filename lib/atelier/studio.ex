@@ -3,7 +3,17 @@ defmodule Atelier.Studio do
 
   def start_project(project_id) do
     # Add Architect, Writer, and Auditor
-    roles = [:environment, :architect, :writer, :auditor, :clerk, :validator, :git_bot, :runner, :analyst]
+    roles = [
+      :environment,
+      :architect,
+      :writer,
+      :auditor,
+      :clerk,
+      :validator,
+      :git_bot,
+      :runner,
+      :analyst
+    ]
 
     Logger.info("Starting project", project_id: project_id, agent_count: length(roles))
 
