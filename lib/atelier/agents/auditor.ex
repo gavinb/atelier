@@ -19,7 +19,11 @@ defmodule Atelier.Agents.Auditor do
 
       {false, issues} ->
         IO.puts("⚠️  Auditor: Issues found. Spawning async LLM task...")
-        Logger.warning("Code issues detected", issue_count: length(issues), issues: inspect(issues))
+
+        Logger.warning("Code issues detected",
+          issue_count: length(issues),
+          issues: inspect(issues)
+        )
 
         # We capture the state needed so the task has context
         topic = state.topic
@@ -33,7 +37,10 @@ defmodule Atelier.Agents.Auditor do
             # This call is now async!
             suggestion = Atelier.LLM.prompt(instructions, user_query)
 
-            Logger.info("LLM fix suggestion generated", suggestion_length: String.length(suggestion))
+            Logger.info("LLM fix suggestion generated",
+              suggestion_length: String.length(suggestion)
+            )
+
             PubSub.broadcast(Atelier.PubSub, topic, {:suggestion_offered, suggestion})
           rescue
             e ->

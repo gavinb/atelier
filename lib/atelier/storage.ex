@@ -17,7 +17,12 @@ defmodule Atelier.Storage do
     # 4. Ensure parent directory exists for files in subdirectories
     path |> Path.dirname() |> File.mkdir_p!()
 
-    Logger.debug("Writing file", project_id: project_id, filename: filename, content_size: byte_size(content))
+    Logger.debug("Writing file",
+      project_id: project_id,
+      filename: filename,
+      content_size: byte_size(content)
+    )
+
     File.write!(path, content)
     Logger.debug("File written successfully", path: path)
 

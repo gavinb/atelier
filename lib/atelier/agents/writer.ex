@@ -161,8 +161,62 @@ defmodule Atelier.Agents.Writer do
   end
 
   def handle_info({:execution_failure, filename, output}, state) do
-    Logger.error("[Writer] 修复模式 (Repair Mode): #{filename} crashed at runtime.")
+    current_attempts = Map.get(state.retries, filename, 0)
 
+    if current_attempts < state.max_retries do
+      new_attempts = current_attempts + 1
+      Logger.warning("[Writer] Attempt #{new_attempts}/#{state.max_retries} to fix #{filename}")
+
+      # Proceed with the LLM call...
+      perform_repair(filename, output, state)
+
+      # Update state with the new attempt count
+      {:noreply, %{state | retries: Map.put(state.retries, filename, new_attempts)}}
+    else
+      Logger.error("[Writer] Max retries reached for #{filename}. Surrendering to human.")
+
+      Phoenix.PubSub.broadcast(
+        Atelier.PubSub,
+        state.topic,
+        {:agent_surrender, filename, output}
+      )
+
+      {:noreply, state}
+    end
+  end
+
+  def handle_info(_msg, state), do: {:noreply, state}
+
+  # Private helper
+  defp execute_file_generation(%{"name" => name, "description" => desc}, state) do
+    IO.puts("✍️  Writer: Generating code for #{name}...")
+    topic = state.topic
+    project_id = state.project_id
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      # NEW: Stricter System Prompt to fix the "Preamble" issue
+      system = """
+      You are a specialized code generator.
+      Output ONLY the raw source code.
+      Do NOT include explanations, markdown backticks, or 'Here is your code'.
+      Strictly follow the file extension rules.
+      """
+
+      try do
+        code = Atelier.LLM.prompt(system, "Implement the file '#{name}': #{desc}")
+
+        # Strip markdown backticks if the LLM ignores instructions
+        clean_code = String.replace(code, ~r/```[a-z]*\n|```/i, "") |> String.trim()
+
+        Atelier.Storage.write_file(project_id, name, clean_code)
+        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, clean_code})
+      rescue
+        e -> IO.puts("❌ Writer Error on #{name}: #{inspect(e)}")
+      end
+    end)
+  end
+
+  defp perform_repair(filename, output, state) do
     project_id = state.project_id
     topic = state.topic
 
@@ -204,36 +258,5 @@ defmodule Atelier.Agents.Writer do
     end)
 
     {:noreply, state}
-  end
-
-  def handle_info(_msg, state), do: {:noreply, state}
-
-  # Private helper
-  defp execute_file_generation(%{"name" => name, "description" => desc}, state) do
-    IO.puts("✍️  Writer: Generating code for #{name}...")
-    topic = state.topic
-    project_id = state.project_id
-
-    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
-      # NEW: Stricter System Prompt to fix the "Preamble" issue
-      system = """
-      You are a specialized code generator.
-      Output ONLY the raw source code.
-      Do NOT include explanations, markdown backticks, or 'Here is your code'.
-      Strictly follow the file extension rules.
-      """
-
-      try do
-        code = Atelier.LLM.prompt(system, "Implement the file '#{name}': #{desc}")
-
-        # Strip markdown backticks if the LLM ignores instructions
-        clean_code = String.replace(code, ~r/```[a-z]*\n|```/i, "") |> String.trim()
-
-        Atelier.Storage.write_file(project_id, name, clean_code)
-        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, clean_code})
-      rescue
-        e -> IO.puts("❌ Writer Error on #{name}: #{inspect(e)}")
-      end
-    end)
   end
 end

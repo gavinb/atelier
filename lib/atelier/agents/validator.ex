@@ -22,12 +22,15 @@ defmodule Atelier.Agents.Validator do
         ".js" ->
           Logger.debug("Running Node validation")
           System.cmd("node", ["--check", full_path])
+
         ".ex" ->
           Logger.debug("Running Elixir validation")
           System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"])
+
         ".py" ->
           Logger.debug("Running Python validation")
           System.cmd("python3", ["-m", "py_compile", full_path])
+
         _ ->
           Logger.info("No validator available", filename: filename, extension: extension)
           {"No validator for this file type", 0}
@@ -41,7 +44,13 @@ defmodule Atelier.Agents.Validator do
 
       {error_msg, exit_code} ->
         IO.puts("❌ Validator: #{filename} has syntax errors!")
-        Logger.warning("Validation failed", filename: filename, exit_code: exit_code, error: error_msg)
+
+        Logger.warning("Validation failed",
+          filename: filename,
+          exit_code: exit_code,
+          error: error_msg
+        )
+
         PubSub.broadcast(Atelier.PubSub, state.topic, {:validation_failed, filename, error_msg})
     end
 

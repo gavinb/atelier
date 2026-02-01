@@ -11,11 +11,12 @@ defmodule Atelier.Studio do
       Logger.debug("Starting agent", role: role, project_id: project_id)
 
       case DynamicSupervisor.start_child(
-        Atelier.AgentSupervisor,
-        {Atelier.Agent, [role: role, project_id: project_id]}
-      ) do
+             Atelier.AgentSupervisor,
+             {Atelier.Agent, [role: role, project_id: project_id]}
+           ) do
         {:ok, _pid} ->
           Logger.debug("Agent started successfully", role: role)
+
         {:error, reason} ->
           Logger.error("Failed to start agent", role: role, reason: inspect(reason))
       end
@@ -26,7 +27,11 @@ defmodule Atelier.Studio do
   end
 
   def request_feature(project_id, requirement) do
-    Logger.info("Feature request received", project_id: project_id, requirement_length: String.length(requirement))
+    Logger.info("Feature request received",
+      project_id: project_id,
+      requirement_length: String.length(requirement)
+    )
+
     pid = GenServer.whereis({:global, {project_id, :architect}})
 
     if pid do

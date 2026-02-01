@@ -5,14 +5,22 @@ defmodule Atelier.LLM do
   def prompt(system_instructions, user_input, opts \\ []) do
     provider = opts[:provider] || Application.get_env(:atelier, :llm_provider, :ollama)
 
-    Logger.debug("Sending LLM prompt", provider: provider, input_length: String.length(user_input))
-    
-    result = case provider do
-      :anthropic -> call_anthropic(system_instructions, user_input)
-      :ollama -> call_ollama(system_instructions, user_input)
-    end
+    Logger.debug("Sending LLM prompt",
+      provider: provider,
+      input_length: String.length(user_input)
+    )
 
-    Logger.debug("Received LLM response", provider: provider, response_length: String.length(result))
+    result =
+      case provider do
+        :anthropic -> call_anthropic(system_instructions, user_input)
+        :ollama -> call_ollama(system_instructions, user_input)
+      end
+
+    Logger.debug("Received LLM response",
+      provider: provider,
+      response_length: String.length(result)
+    )
+
     result
   end
 
@@ -21,16 +29,17 @@ defmodule Atelier.LLM do
     Logger.debug("Calling Anthropic API")
 
     try do
-      response = Req.post!("https://api.anthropic.com/v1/messages",
-        headers: [{"x-api-key", api_key}, {"anthropic-version", "2023-06-01"}],
-        json: %{
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 1024,
-          system: system,
-          messages: [%{role: "user", content: user}]
-        }
-      )
-      
+      response =
+        Req.post!("https://api.anthropic.com/v1/messages",
+          headers: [{"x-api-key", api_key}, {"anthropic-version", "2023-06-01"}],
+          json: %{
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 1024,
+            system: system,
+            messages: [%{role: "user", content: user}]
+          }
+        )
+
       text = response.body["content"] |> List.first() |> Map.get("text")
       Logger.debug("Anthropic response received")
       text
@@ -50,15 +59,16 @@ defmodule Atelier.LLM do
     full_prompt = "System: #{system}\n\nUser: #{user}"
 
     try do
-      response = Req.post!("http://localhost:11434/api/generate",
-        json: %{
-          model: model,
-          prompt: full_prompt,
-          stream: false
-        },
-        receive_timeout: 60_000
-      )
-      
+      response =
+        Req.post!("http://localhost:11434/api/generate",
+          json: %{
+            model: model,
+            prompt: full_prompt,
+            stream: false
+          },
+          receive_timeout: 60_000
+        )
+
       text = response.body["response"]
       Logger.debug("Ollama response received", model: model)
       text

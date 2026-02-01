@@ -9,6 +9,7 @@ defmodule Atelier.Agents.Clerk do
 
   def handle_info({:blueprint_ready, files}, state) do
     new_state = Map.put(state, :pending_files, Enum.map(files, & &1["name"]))
+
     content = """
     # Project Manifest: #{state.project_id}
 
