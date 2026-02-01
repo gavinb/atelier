@@ -11,11 +11,11 @@ defmodule Atelier.Agents.GitBot do
     IO.puts("📦 GitBot: #{filename} passed validation. Preparing commit...")
     Logger.info("Validation passed, preparing commit", filename: filename, project_id: state.project_id)
 
-    project_path = Path.expand("tmp/atelier_studio/#{state.project_id}")
+    project_path = Path.expand("/tmp/atelier_studio/#{state.project_id}")
 
     Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
       Logger.debug("Starting commit task", filename: filename, project_path: project_path)
-      
+
       # 1. Ask the LLM for a sensible commit message
       {:ok, code} = Atelier.Storage.read_file(state.project_id, filename)
 
@@ -34,11 +34,11 @@ defmodule Atelier.Agents.GitBot do
       try do
         Logger.debug("Running git add", filename: filename)
         {add_output, status1} = System.cmd("git", ["add", filename], cd: project_path, stderr_to_stdout: true)
-        
+
         if status1 != 0 do
           Logger.warning("Git add had non-zero status", output: add_output, status: status1)
         end
-        
+
         Logger.debug("Running git commit", message: commit_msg)
         {commit_output, status2} = System.cmd("git", ["commit", "-m", commit_msg], cd: project_path, stderr_to_stdout: true)
 

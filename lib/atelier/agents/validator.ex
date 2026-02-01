@@ -13,7 +13,7 @@ defmodule Atelier.Agents.Validator do
     IO.puts("🧪 Validator: Checking syntax for #{filename}...")
     Logger.debug("Starting validation", filename: filename, extension: extension)
 
-    full_path = Path.expand("tmp/atelier_studio/#{state.project_id}/#{filename}")
+    full_path = Path.expand("/tmp/atelier_studio/#{state.project_id}/#{filename}")
     Logger.debug("Validating file at path", path: full_path)
 
     # Determine the check command based on extension
@@ -24,7 +24,7 @@ defmodule Atelier.Agents.Validator do
           System.cmd("node", ["--check", full_path])
         ".ex" ->
           Logger.debug("Running Elixir validation")
-          System.cmd("elixirc", [full_path, "-o", "tmp/atelier_studio/build"])
+          System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"])
         ".py" ->
           Logger.debug("Running Python validation")
           System.cmd("python3", ["-m", "py_compile", full_path])

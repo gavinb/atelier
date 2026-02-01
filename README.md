@@ -26,6 +26,7 @@ To test locally, ensure `ollama` is running then:
 ```
 % iex -S mix
 
-iex(1)> Atelier.Studio.start_project("vibe-store")
-iex(2)> Atelier.Studio.request_feature("vibe-store", "A simple shopping cart module with add and remove functions")
+iex(1)> Logger.configure(level: :debug)
+iex(2)> Atelier.Studio.start_project("vibe-store")
+iex(3)> Atelier.Studio.request_feature("vibe-store", "A simple shopping cart module with add and remove functions")
 ```
