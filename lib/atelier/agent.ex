@@ -11,6 +11,20 @@ defmodule Atelier.Agent do
   require Logger
   alias Phoenix.PubSub
 
+  @role_modules %{
+    environment: Atelier.Agents.Environment,
+    architect: Atelier.Agents.Architect,
+    writer: Atelier.Agents.Writer,
+    auditor: Atelier.Agents.Auditor,
+    validator: Atelier.Agents.Validator,
+    git_bot: Atelier.Agents.GitBot,
+    clerk: Atelier.Agents.Clerk,
+    runner: Atelier.Agents.Runner,
+    analyst: Atelier.Agents.Analyst,
+    researcher: Atelier.Agents.Researcher
+  }
+
+  @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
     name = {:global, {opts[:project_id], opts[:role]}}
     GenServer.start_link(__MODULE__, opts, name: name)
@@ -26,54 +40,10 @@ defmodule Atelier.Agent do
     Logger.info("Agent initialized", role: role, project_id: project_id)
     IO.puts("✨ Agent [#{role}] joined Atelier for #{project_id}")
 
-    # Map roles to their specific implementation modules
-    module =
-      case role do
-        :environment ->
-          Logger.debug("Mapping role to Environment implementation")
-          Atelier.Agents.Environment
+    module = Map.fetch!(@role_modules, role)
+    Logger.debug("Mapping role to #{inspect(module)} implementation")
 
-        :architect ->
-          Logger.debug("Mapping role to Architect implementation")
-          Atelier.Agents.Architect
-
-        :writer ->
-          Logger.debug("Mapping role to Writer implementation")
-          Atelier.Agents.Writer
-
-        :auditor ->
-          Logger.debug("Mapping role to Auditor implementation")
-          Atelier.Agents.Auditor
-
-        :validator ->
-          Logger.debug("Mapping role to Validator implementation")
-          Atelier.Agents.Validator
-
-        :git_bot ->
-          Logger.debug("Mapping role to GitBot implementation")
-          Atelier.Agents.GitBot
-
-        :clerk ->
-          Logger.debug("Mapping role to Clerk implementation")
-          Atelier.Agents.Clerk
-
-        :runner ->
-          Logger.debug("Mapping role to Runner implementation")
-          Atelier.Agents.Runner
-
-        :analyst ->
-          Logger.debug("Mapping role to Analyst implementation")
-          Atelier.Agents.Analyst
-
-        :researcher ->
-          Logger.debug("Mapping role to Researcher implementation")
-          Atelier.Agents.Researcher
-      end
-
-    # 3. Initialize the specific state from the module
     initial_state = module.init_state(opts)
-
-    # 4. Add the module reference to the state so we can delegate later
     state = Map.put(initial_state, :module, module)
 
     Logger.debug("Agent process started and state initialized.")
@@ -91,6 +61,25 @@ defmodule Atelier.Agent do
 
   # Delegate all infos to the role-specific module
   @impl true
+  def handle_info(:project_finished, state) do
+    # Let the module handle the message first (e.g., Clerk writes final manifest)
+    case state.module.handle_info(:project_finished, state) do
+      {:noreply, new_state} ->
+        # Schedule shutdown after a brief delay to allow final operations
+        Process.send_after(self(), :shutdown, 1000)
+        {:noreply, new_state}
+
+      other ->
+        other
+    end
+  end
+
+  def handle_info(:shutdown, state) do
+    Logger.info("Agent shutting down", role: state.role, project_id: state.project_id)
+    IO.puts("👋 Agent [#{state.role}] leaving Atelier for #{state.project_id}")
+    {:stop, :normal, state}
+  end
+
   def handle_info(msg, state) do
     message_type = if is_tuple(msg), do: elem(msg, 0), else: msg
     Logger.debug("Delegating info message", role: state.role, message_type: message_type)
