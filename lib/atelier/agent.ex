@@ -60,6 +60,10 @@ defmodule Atelier.Agent do
         :runner ->
           Logger.debug("Mapping role to Runner implementation")
           Atelier.Agents.Runner
+
+        :analyst ->
+          Logger.debug("Mapping role to Analyst implementation")
+          Atelier.Agents.Analyst
       end
 
     # 3. Initialize the specific state from the module

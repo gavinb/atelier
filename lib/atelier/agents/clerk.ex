@@ -62,7 +62,7 @@ defmodule Atelier.Agents.Clerk do
     """
 
     # Append to the existing manifest
-    path = Path.expand("tmp/atelier_studio/#{state.project_id}/MANIFEST.md")
+    path = Path.expand("/tmp/atelier_studio/#{state.project_id}/MANIFEST.md")
     File.write!(path, summary, [:append])
 
     Logger.info("[Clerk] Final manifest signed and sealed.")

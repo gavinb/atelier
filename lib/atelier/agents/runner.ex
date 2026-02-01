@@ -15,7 +15,7 @@ defmodule Atelier.Agents.Runner do
     # or perhaps we run everything for testing.
     Logger.info("[Runner] Attempting to execute #{filename}...")
 
-    project_path = Path.expand("tmp/atelier_studio/#{state.project_id}")
+    project_path = Path.expand("/tmp/atelier_studio/#{state.project_id}")
     full_path = Path.join(project_path, filename)
 
     # Determine how to run based on extension

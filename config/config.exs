@@ -2,6 +2,7 @@ import Config
 
 # Configure the Elixir Logger
 config :logger, :console,
+  level: :info,
   # This format string includes $metadata to show your [:role, :project]
   format: "$time $metadata[$level] $message\n",
   # Tells Logger which specific metadata keys to pull from the process
