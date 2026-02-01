@@ -28,24 +28,34 @@ defmodule Atelier.Agent do
         :environment ->
           Logger.debug("Mapping role to Environment implementation")
           Atelier.Agents.Environment
+
         :architect ->
           Logger.debug("Mapping role to Architect implementation")
           Atelier.Agents.Architect
+
         :writer ->
           Logger.debug("Mapping role to Writer implementation")
           Atelier.Agents.Writer
+
         :auditor ->
           Logger.debug("Mapping role to Auditor implementation")
           Atelier.Agents.Auditor
+
         :validator ->
           Logger.debug("Mapping role to Validator implementation")
           Atelier.Agents.Validator
+
         :git_bot ->
           Logger.debug("Mapping role to GitBot implementation")
           Atelier.Agents.GitBot
+
         :clerk ->
           Logger.debug("Mapping role to Clerk implementation")
           Atelier.Agents.Clerk
+
+        :runner ->
+          Logger.debug("Mapping role to Runner implementation")
+          Atelier.Agents.Runner
       end
 
     {:ok,

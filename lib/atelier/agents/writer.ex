@@ -4,6 +4,7 @@ defmodule Atelier.Agents.Writer do
   """
 
   alias Phoenix.PubSub
+  require Logger
 
   def handle_cast({:write_code, filename, code}, state) do
     IO.puts("✍️  Writer: Saving #{filename} to local storage...")
@@ -154,6 +155,52 @@ defmodule Atelier.Agents.Writer do
 
       # Broadcast for the Auditor to check
       PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, code})
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_info({:execution_failure, filename, output}, state) do
+    Logger.error("[Writer] 修复模式 (Repair Mode): #{filename} crashed at runtime.")
+
+    project_id = state.project_id
+    topic = state.topic
+
+    # 1. Grab the code that just failed
+    {:ok, failed_code} = Atelier.Storage.read_file(project_id, filename)
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system_prompt = """
+      You are an expert debugger. The code you wrote passed syntax checks but failed during execution.
+      Fix the logic errors. Output ONLY the raw corrected source code.
+      """
+
+      user_prompt = """
+      The following code for '#{filename}' crashed:
+
+      --- CODE ---
+      #{failed_code}
+
+      --- RUNTIME ERROR ---
+      #{output}
+
+      Identify the bug (e.g., undefined variables, type errors, or logic flaws) and provide the complete fixed file.
+      """
+
+      try do
+        # 2. Ask the LLM to fix its mistake
+        raw_fix = Atelier.LLM.prompt(system_prompt, user_prompt)
+        clean_fix = Atelier.LLM.clean_code(raw_fix)
+
+        # 3. Overwrite the file
+        Atelier.Storage.write_file(project_id, filename, clean_fix)
+        Logger.info("[Writer] Applied runtime fix to #{filename}. Re-validating...")
+
+        # 4. Trigger the cycle again (Validator -> Runner)
+        Phoenix.PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, clean_fix, filename})
+      rescue
+        e -> Logger.error("[Writer] Failed to process auto-fix: #{inspect(e)}")
+      end
     end)
 
     {:noreply, state}
