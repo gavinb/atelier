@@ -1,6 +1,8 @@
 defmodule Atelier.Agents.Environment do
   require Logger
 
+  @behaviour Atelier.Agent.Worker
+
   def init_state(opts) do
     %{
       role: :environment,

@@ -5,6 +5,8 @@ defmodule Atelier.Agents.Clerk do
 
   require Logger
 
+  @behaviour Atelier.Agent.Worker
+
   def init_state(opts) do
     %{
       role: :clerk,

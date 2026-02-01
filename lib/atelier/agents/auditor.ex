@@ -6,6 +6,8 @@ defmodule Atelier.Agents.Auditor do
   require Logger
   alias Phoenix.PubSub
 
+  @behaviour Atelier.Agent.Worker
+
   def init_state(opts) do
     %{
       role: :auditor,

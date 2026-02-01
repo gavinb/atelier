@@ -6,6 +6,8 @@ defmodule Atelier.Agents.Writer do
   alias Phoenix.PubSub
   require Logger
 
+  @behaviour Atelier.Agent.Worker
+
   @doc """
   Returns the initial state specific to the Writer role.
   """

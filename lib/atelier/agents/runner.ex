@@ -1,5 +1,6 @@
 defmodule Atelier.Agents.Runner do
   require Logger
+  @behaviour Atelier.Agent.Worker
 
   def init_state(opts) do
     %{
@@ -27,6 +28,8 @@ defmodule Atelier.Agents.Runner do
 
     {:noreply, state}
   end
+
+  def handle_info(_msg, state), do: {:noreply, state}
 
   defp execute_command(cmd, args, filename, state) do
     # System.cmd returns {output, exit_status}

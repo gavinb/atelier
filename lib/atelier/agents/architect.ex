@@ -2,8 +2,9 @@ defmodule Atelier.Agents.Architect do
   @moduledoc """
   Architect agent responsible for designing system blueprints.
   """
-
   alias Phoenix.PubSub
+
+  @behaviour Atelier.Agent.Worker
 
   def init_state(opts) do
     %{

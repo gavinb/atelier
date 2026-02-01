@@ -1,3 +1,7 @@
+defmodule Atelier.Agent.Worker do
+  @callback init_state(opts :: Keyword.t()) :: map()
+end
+
 defmodule Atelier.Agent do
   @moduledoc """
   GenServer delegator that routes agent behavior to specialized implementation modules.
