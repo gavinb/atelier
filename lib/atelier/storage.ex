@@ -1,65 +1,165 @@
 defmodule Atelier.Storage do
+  @moduledoc """
+  File storage for Atelier projects.
+
+  Supports two storage backends:
+  - Local: Files stored in `/tmp/atelier_studio/{project_id}/`
+  - Sprites: Files stored in isolated sandbox at `/workspace/`
+
+  The backend is selected based on `Atelier.Sprites.enabled?()`.
+  """
+
   require Logger
-  # Use Path.expand to ensure we are working with an absolute path
-  # based on where the project root is.
+
+  alias Atelier.Sprites
+
   @storage_root Path.expand("/tmp/atelier_studio")
 
-  @spec write_file(String.t(), String.t(), String.t()) :: {:ok, String.t()}
+  @doc """
+  Write a file to the project workspace.
+  """
+  @spec write_file(String.t(), String.t(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def write_file(project_id, filename, content) do
-    # 1. Define the directory for the project
-    project_dir = Path.join(@storage_root, project_id)
-
-    # 2. Ensure the directory exists (creates /tmp/atelier_studio/project_id)
-    File.mkdir_p!(project_dir)
-
-    # 3. Write the file
-    path = Path.join(project_dir, filename)
-
-    # 4. Ensure parent directory exists for files in subdirectories
-    path |> Path.dirname() |> File.mkdir_p!()
-
     Logger.debug("Writing file",
       project_id: project_id,
       filename: filename,
-      content_size: byte_size(content)
+      content_size: byte_size(content),
+      sandbox: Sprites.enabled?()
     )
 
+    if Sprites.enabled?() do
+      write_file_sprite(project_id, filename, content)
+    else
+      write_file_local(project_id, filename, content)
+    end
+  end
+
+  @doc """
+  Read a file from the project workspace.
+  """
+  @spec read_file(String.t(), String.t()) :: {:ok, String.t()} | {:error, term()}
+  def read_file(project_id, filename) do
+    Logger.debug("Reading file",
+      project_id: project_id,
+      filename: filename,
+      sandbox: Sprites.enabled?()
+    )
+
+    if Sprites.enabled?() do
+      read_file_sprite(project_id, filename)
+    else
+      read_file_local(project_id, filename)
+    end
+  end
+
+  @doc """
+  Initialize the project workspace.
+  Creates the directory structure and initializes git.
+  """
+  @spec init_workspace(String.t()) :: String.t() | {:ok, String.t()} | {:error, term()}
+  def init_workspace(project_id) do
+    Logger.info("Initializing workspace",
+      project_id: project_id,
+      sandbox: Sprites.enabled?()
+    )
+
+    if Sprites.enabled?() do
+      init_workspace_sprite(project_id)
+    else
+      init_workspace_local(project_id)
+    end
+  end
+
+  @doc """
+  Get the workspace path for a project.
+  """
+  @spec workspace_path(String.t()) :: String.t()
+  def workspace_path(project_id) do
+    if Sprites.enabled?() do
+      "/workspace"
+    else
+      Path.join(@storage_root, project_id)
+    end
+  end
+
+  # Local storage implementation
+
+  defp write_file_local(project_id, filename, content) do
+    project_dir = Path.join(@storage_root, project_id)
+    File.mkdir_p!(project_dir)
+
+    path = Path.join(project_dir, filename)
+    path |> Path.dirname() |> File.mkdir_p!()
+
     File.write!(path, content)
-    Logger.debug("File written successfully", path: path)
+    Logger.debug("File written locally", path: path)
 
     {:ok, path}
   end
 
-  @spec read_file(String.t(), String.t()) :: {:ok, String.t()} | {:error, File.posix()}
-  def read_file(project_id, filename) do
+  defp read_file_local(project_id, filename) do
     path = Path.join([@storage_root, project_id, filename])
-    Logger.debug("Reading file", project_id: project_id, filename: filename, path: path)
     File.read(path)
   end
 
-  @spec init_workspace(String.t()) :: String.t()
-  def init_workspace(project_id) do
-    path = Path.expand("/tmp/atelier_studio/#{project_id}")
-    Logger.info("Initializing workspace", project_id: project_id, path: path)
+  defp init_workspace_local(project_id) do
+    path = Path.join(@storage_root, project_id)
     File.mkdir_p!(path)
 
-    # Initialize git if it's not already there
-    if File.dir?(Path.join(path, ".git")) do
-      Logger.debug("Git repository already exists", project_id: project_id)
-    else
+    unless File.dir?(Path.join(path, ".git")) do
       Logger.debug("Initializing git repository", project_id: project_id, path: path)
-      {init_output, init_status} = System.cmd("git", ["init"], cd: path)
+      {_output, status} = System.cmd("git", ["init"], cd: path)
 
-      if init_status == 0 do
-        Logger.debug("Git repository initialized")
+      if status == 0 do
         System.cmd("git", ["config", "user.name", "Atelier Bot"], cd: path)
         System.cmd("git", ["config", "user.email", "bot@atelier.local"], cd: path)
-        Logger.debug("Git user configured")
-      else
-        Logger.error("Failed to initialize git repository", output: init_output)
+        Logger.debug("Git repository initialized")
       end
     end
 
     path
   end
+
+  # Sprites sandbox implementation
+
+  defp write_file_sprite(project_id, filename, content) do
+    sprite_name = sprite_name(project_id)
+    path = "/workspace/#{filename}"
+
+    case Sprites.write_file(sprite_name, path, content) do
+      :ok ->
+        Logger.debug("File written to sprite", sprite: sprite_name, path: path)
+        {:ok, path}
+
+      {:error, reason} ->
+        Logger.error("Failed to write file to sprite", error: inspect(reason))
+        {:error, reason}
+    end
+  end
+
+  defp read_file_sprite(project_id, filename) do
+    sprite_name = sprite_name(project_id)
+    path = "/workspace/#{filename}"
+    Sprites.read_file(sprite_name, path)
+  end
+
+  defp init_workspace_sprite(project_id) do
+    sprite_name = sprite_name(project_id)
+
+    # Create the sprite first
+    case Sprites.create(sprite_name) do
+      {:ok, _} ->
+        # Initialize workspace inside the sprite
+        case Sprites.init_workspace(sprite_name) do
+          {:ok, path} -> path
+          {:error, reason} -> {:error, reason}
+        end
+
+      {:error, reason} ->
+        Logger.error("Failed to create sprite", error: inspect(reason))
+        {:error, reason}
+    end
+  end
+
+  defp sprite_name(project_id), do: "atelier-#{project_id}"
 end
