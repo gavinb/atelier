@@ -25,6 +25,9 @@ defmodule Atelier.Agent do
     # Map roles to their specific implementation modules
     module =
       case role do
+        :environment ->
+          Logger.debug("Mapping role to Environment implementation")
+          Atelier.Agents.Environment
         :architect ->
           Logger.debug("Mapping role to Architect implementation")
           Atelier.Agents.Architect
@@ -58,14 +61,16 @@ defmodule Atelier.Agent do
   # Delegate all casts to the role-specific module
   @impl true
   def handle_cast(msg, state) do
-    Logger.debug("Delegating cast message", role: state.role, message_type: elem(msg, 0))
+    message_type = if is_tuple(msg), do: elem(msg, 0), else: msg
+    Logger.debug("Delegating cast message", role: state.role, message_type: message_type)
     state.module.handle_cast(msg, state)
   end
 
   # Delegate all infos to the role-specific module
   @impl true
   def handle_info(msg, state) do
-    Logger.debug("Delegating info message", role: state.role, message_type: elem(msg, 0))
+    message_type = if is_tuple(msg), do: elem(msg, 0), else: msg
+    Logger.debug("Delegating info message", role: state.role, message_type: message_type)
     state.module.handle_info(msg, state)
   end
 end
