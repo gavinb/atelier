@@ -52,5 +52,22 @@ defmodule Atelier.Agents.Clerk do
     {:noreply, %{state | pending_files: remaining}}
   end
 
+  def handle_info(:project_finished, state) do
+    summary = """
+
+    ## Final Status
+    - **Status:** 🏆 Completed Successfully
+    - **Timestamp:** #{DateTime.now!("Etc/UTC")}
+    - **Agents Involved:** Architect, Writer, Auditor, Validator, Runner, GitBot
+    """
+
+    # Append to the existing manifest
+    path = Path.expand("tmp/atelier_studio/#{state.project_id}/MANIFEST.md")
+    File.write!(path, summary, [:append])
+
+    Logger.info("[Clerk] Final manifest signed and sealed.")
+    {:noreply, state}
+  end
+
   def handle_info(_msg, state), do: {:noreply, state}
 end
