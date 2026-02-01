@@ -1,13 +1,17 @@
 import Config
 
-# Default to local development
+# Configure the Elixir Logger
+config :logger, :console,
+  # This format string includes $metadata to show your [:role, :project]
+  format: "$time $metadata[$level] $message\n",
+  # Tells Logger which specific metadata keys to pull from the process
+  metadata: [:role, :project],
+  colors: [enabled: true, info: :green, debug: :cyan, error: :red]
+
+# Default Agent settings
 config :atelier,
   llm_provider: :ollama,
   ollama_model: "llama3"
 
-config :logger, :console,
-  format: "\n$time [$level] $message\n",
-  # You can add custom metadata here
-  metadata: [:pid, :role]
-
-# You can override this in a config/runtime.exs later for production
+# Import environment specific config (optional but standard)
+# import_config "#{config_env()}.exs"
