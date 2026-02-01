@@ -12,7 +12,8 @@ defmodule Atelier.Studio do
       :validator,
       :git_bot,
       :runner,
-      :analyst
+      :analyst,
+      :researcher
     ]
 
     Logger.info("Starting project", project_id: project_id, agent_count: length(roles))
