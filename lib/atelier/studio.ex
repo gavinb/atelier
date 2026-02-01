@@ -5,6 +5,9 @@ defmodule Atelier.Studio do
     # Initialize workspace with git repository before starting agents
     Atelier.Storage.init_workspace(project_id)
 
+    # Register with dashboard event collector
+    Atelier.Dashboard.EventCollector.register_project(project_id)
+
     roles = [
       :environment,
       :architect,

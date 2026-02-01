@@ -12,4 +12,4 @@ fn scan_code(code: String, forbidden: Vec<String>) -> (bool, Vec<String>) {
     (is_safe, found)
 }
 
-rustler::init!("Elixir.Atelier.Native.Scanner", [scan_code]);
+rustler::init!("Elixir.Atelier.Native.Scanner");

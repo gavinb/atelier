@@ -10,6 +10,7 @@ Atelier is an Elixir-based multi-agent code generation system. It uses a team of
 - **Code auditing** - Rust NIF scans for forbidden patterns (TODO, FIXME, etc.)
 - **Auto-commit** - GitBot automatically commits validated files with LLM-generated commit messages
 - **Post-mortem analysis** - Analyst agent generates LESSONS_LEARNED.md for failed builds
+- **Live Dashboard** - Optional Phoenix LiveView dashboard for real-time project monitoring
 
 ## Requirements
 
@@ -114,6 +115,40 @@ Studio.request_feature
 :project_finished
 ```
 
+## Dashboard (Optional)
+
+Atelier includes an optional Phoenix LiveView dashboard for monitoring projects in real-time.
+
+### Starting the Dashboard
+
+**Option 1: Auto-start**
+
+Set in `config/config.exs`:
+```elixir
+config :atelier, start_dashboard: true
+```
+
+Then run:
+```bash
+iex -S mix
+```
+
+**Option 2: Manual start**
+
+```elixir
+# In IEx
+AtelierWeb.Endpoint.start_link([])
+```
+
+The dashboard will be available at [http://localhost:4000](http://localhost:4000)
+
+### Features
+
+- **Project list** - See all active/completed projects
+- **File progress** - Track files through the pipeline (pending → validating → committed)
+- **Live event feed** - Real-time log of all agent messages
+- **Project details** - Click a project to see its files and events
+
 ## Development
 
 ```bash
@@ -125,6 +160,9 @@ mix credo
 
 # Format code
 mix format
+
+# Build dashboard assets
+mix assets.build
 
 # Export source (excludes build artifacts)
 mix export

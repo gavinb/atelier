@@ -7,6 +7,7 @@ defmodule Atelier.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
+      aliases: aliases(),
       deps: deps()
     ]
   end
@@ -25,7 +26,29 @@ defmodule Atelier.MixProject do
       {:rustler, "~> 0.37.1", runtime: false},
       {:phoenix_pubsub, "~> 2.2"},
       {:req, "~> 0.5.17"},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+
+      # Dashboard (optional)
+      {:phoenix, "~> 1.7"},
+      {:phoenix_live_view, "~> 1.0"},
+      {:phoenix_html, "~> 4.1"},
+      {:phoenix_live_reload, "~> 1.5", only: :dev},
+      {:bandit, "~> 1.6"},
+      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev}
+    ]
+  end
+
+  defp aliases do
+    [
+      setup: ["deps.get", "assets.setup", "assets.build"],
+      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.build": ["tailwind atelier", "esbuild atelier"],
+      "assets.deploy": [
+        "tailwind atelier --minify",
+        "esbuild atelier --minify",
+        "phx.digest"
+      ]
     ]
   end
 end

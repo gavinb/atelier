@@ -4,7 +4,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-Atelier is an Elixir-based multi-agent code generation system. It uses a team of specialized agents communicating via Phoenix.PubSub to generate, validate, audit, and commit code automatically. The system integrates with LLMs (Ollama or Anthropic) for code generation and uses a Rust NIF for code scanning.
+Atelier is an Elixir-based multi-agent code generation system. It uses a team of specialized agents communicating via Phoenix.PubSub to generate, validate, audit, and commit code automatically. The system integrates with LLMs (Ollama or Anthropic) for code generation and uses a Rust NIF for code scanning. Includes an optional Phoenix LiveView dashboard for real-time monitoring.
 
 ## Build & Development Commands
 
@@ -26,6 +26,13 @@ mix credo
 
 # Format code
 mix format
+
+# Build dashboard assets
+mix assets.build
+
+# Start with dashboard on localhost:4000
+# Set config :atelier, start_dashboard: true in config.exs, or:
+AtelierWeb.Endpoint.start_link([])
 ```
 
 ## Testing Locally
@@ -63,7 +70,7 @@ Agents are spawned via `DynamicSupervisor` and communicate through `Phoenix.PubS
 - **GitBot** - Auto-commits validated files
 - **Clerk** - Tracks project progress, writes MANIFEST.md
 - **Analyst** - Collects failures, generates LESSONS_LEARNED.md post-mortem
-- **Researcher** - Performs web searches for the Architect (currently stubbed)
+- **Researcher** - Performs web searches for the Architect using DuckDuckGo API
 - **Environment** - Health checks for LLM infrastructure
 
 ### Message Flow
@@ -82,7 +89,9 @@ Agents are spawned via `DynamicSupervisor` and communicate through `Phoenix.PubS
 Atelier.Supervisor
 ├── Phoenix.PubSub (Atelier.PubSub)
 ├── DynamicSupervisor (Atelier.AgentSupervisor) - spawns Agent processes
-└── Task.Supervisor (Atelier.LLMTaskSupervisor) - async LLM calls
+├── Task.Supervisor (Atelier.LLMTaskSupervisor) - async LLM calls
+├── Atelier.Dashboard.EventCollector - collects events for dashboard
+└── AtelierWeb.Endpoint (optional) - LiveView dashboard on port 4000
 ```
 
 ## Configuration
@@ -90,6 +99,9 @@ Atelier.Supervisor
 In `config/config.exs`:
 - `llm_provider`: `:ollama` (default) or `:anthropic`
 - `ollama_model`: Model name (default: `"llama3"`)
+- `ollama_endpoint`: Ollama API URL (default: `"http://localhost:11434"`)
+- `llm_timeout`: Request timeout in ms (default: `120_000`)
+- `start_dashboard`: Auto-start LiveView dashboard (default: `false`)
 - For Anthropic: set `ANTHROPIC_API_KEY` environment variable
 
 ## Rust NIF
