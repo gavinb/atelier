@@ -31,6 +31,9 @@ defmodule Atelier.Agents.Researcher do
     {:noreply, state}
   end
 
+  # Ignore messages this agent doesn't handle
+  def handle_info(_msg, state), do: {:noreply, state}
+
   defp perform_web_search(query) do
     # Here you would call Req.get/2 to a search API
     "Search results for #{query}: Use 'mathjs' for advanced calculations..."

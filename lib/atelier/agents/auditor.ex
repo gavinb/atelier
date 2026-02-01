@@ -24,7 +24,7 @@ defmodule Atelier.Agents.Auditor do
     {:noreply, state}
   end
 
-  def handle_info({:code_ready, code}, state) do
+  def handle_info({:code_ready, code, _filename}, state) do
     IO.puts("🔍 Auditor: Running infra-scan...")
     Logger.debug("Starting code scan", code_length: String.length(code))
 
@@ -38,6 +38,9 @@ defmodule Atelier.Agents.Auditor do
 
     {:noreply, state}
   end
+
+  # Ignore messages this agent doesn't handle
+  def handle_info(_msg, state), do: {:noreply, state}
 
   defp handle_clean_scan do
     IO.puts("✅ Auditor: Clean!")
