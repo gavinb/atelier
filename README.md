@@ -35,8 +35,10 @@ Edit `config/config.exs` to change LLM settings:
 
 ```elixir
 config :atelier,
-  llm_provider: :ollama,      # or :anthropic
-  ollama_model: "llama3"      # model name for Ollama
+  llm_provider: :ollama,        # or :anthropic
+  ollama_model: "llama3",       # model name for Ollama
+  ollama_endpoint: "http://localhost:11434",  # Ollama API endpoint
+  llm_timeout: 120_000          # LLM request timeout in ms (default: 2 minutes)
 ```
 
 For Anthropic, set the `ANTHROPIC_API_KEY` environment variable.
@@ -87,7 +89,7 @@ Generated files are written to `/tmp/atelier_studio/{project_id}/`, including:
 | **GitBot** | Auto-commits validated files with LLM-generated messages |
 | **Clerk** | Tracks project progress, writes MANIFEST.md |
 | **Analyst** | Collects failures, generates LESSONS_LEARNED.md |
-| **Researcher** | Web search for Architect (currently stubbed) |
+| **Researcher** | Web search for Architect using DuckDuckGo API |
 | **Environment** | Health checks for LLM infrastructure |
 
 ### Message Flow
@@ -130,9 +132,7 @@ mix export
 
 ## Known Issues
 
-- **Researcher agent is stubbed** - Web search returns hardcoded responses
-- **No LLM timeout handling** - Slow/unresponsive LLM calls may hang indefinitely
-- **Agents don't terminate** - After `:project_finished`, agent processes remain running
+No major known issues at this time.
 
 ## License
 
