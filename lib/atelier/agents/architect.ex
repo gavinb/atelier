@@ -5,6 +5,14 @@ defmodule Atelier.Agents.Architect do
 
   alias Phoenix.PubSub
 
+  def init_state(opts) do
+    %{
+      role: :architect,
+      project_id: opts[:project_id],
+      topic: "project:#{opts[:project_id]}"
+    }
+  end
+
   def handle_cast({:design_spec, requirement}, state) do
     IO.puts("📐 Architect: Designing system for: #{requirement}")
     topic = state.topic

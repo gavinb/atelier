@@ -58,14 +58,15 @@ defmodule Atelier.Agent do
           Atelier.Agents.Runner
       end
 
-    {:ok,
-     %{
-       role: role,
-       project_id: project_id,
-       topic: topic,
-       module: module,
-       memory: []
-     }}
+    # 3. Initialize the specific state from the module
+    initial_state = module.init_state(opts)
+
+    # 4. Add the module reference to the state so we can delegate later
+    state = Map.put(initial_state, :module, module)
+
+    Logger.debug("Agent process started and state initialized.")
+
+    {:ok, state}
   end
 
   # Delegate all casts to the role-specific module

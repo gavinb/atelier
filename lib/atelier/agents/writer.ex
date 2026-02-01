@@ -6,6 +6,26 @@ defmodule Atelier.Agents.Writer do
   alias Phoenix.PubSub
   require Logger
 
+  @doc """
+  Returns the initial state specific to the Writer role.
+  """
+  def init_state(opts) do
+    %{
+      role: :writer,
+      project_id: opts[:project_id],
+      topic: "project:#{opts[:project_id]}",
+      # --- Retry Logic State ---
+      # Map of %{"filename.ex" => count}
+      retries: %{},
+      # Threshold before surrendering
+      max_retries: 3,
+      # The file currently being worked on
+      current_task: nil,
+      # Pending files from the architect
+      queue: []
+    }
+  end
+
   def handle_cast({:write_code, filename, code}, state) do
     IO.puts("✍️  Writer: Saving #{filename} to local storage...")
 
@@ -183,6 +203,11 @@ defmodule Atelier.Agents.Writer do
 
       {:noreply, state}
     end
+  end
+
+  def handle_info({:execution_success, filename, _output}, state) do
+    Logger.info("[Writer] Success confirmed for #{filename}. Resetting retry counter.")
+    {:noreply, %{state | retries: Map.delete(state.retries, filename)}}
   end
 
   def handle_info(_msg, state), do: {:noreply, state}

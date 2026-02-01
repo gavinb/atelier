@@ -1,6 +1,14 @@
 defmodule Atelier.Agents.Runner do
   require Logger
 
+  def init_state(opts) do
+    %{
+      role: :runner,
+      project_id: opts[:project_id],
+      topic: "project:#{opts[:project_id]}"
+    }
+  end
+
   def handle_info({:validation_passed, filename}, state) do
     # We only run files that look like "main" or entry points,
     # or perhaps we run everything for testing.

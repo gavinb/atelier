@@ -5,6 +5,15 @@ defmodule Atelier.Agents.Clerk do
 
   require Logger
 
+  def init_state(opts) do
+    %{
+      role: :clerk,
+      project_id: opts[:project_id],
+      topic: "project:#{opts[:project_id]}",
+      pending_files: []
+    }
+  end
+
   def handle_cast(_msg, state), do: {:noreply, state}
 
   def handle_info({:blueprint_ready, files}, state) do

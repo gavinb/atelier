@@ -6,6 +6,14 @@ defmodule Atelier.Agents.Validator do
   require Logger
   alias Phoenix.PubSub
 
+  def init_state(opts) do
+    %{
+      role: :validator,
+      project_id: opts[:project_id],
+      topic: "project:#{opts[:project_id]}"
+    }
+  end
+
   def handle_cast(_msg, state), do: {:noreply, state}
 
   def handle_info({:code_ready, _code, filename}, state) do

@@ -1,6 +1,14 @@
 defmodule Atelier.Agents.Environment do
   require Logger
 
+  def init_state(opts) do
+    %{
+      role: :environment,
+      project_id: opts[:project_id],
+      topic: "project:#{opts[:project_id]}"
+    }
+  end
+
   def handle_cast(:check_health, state) do
     provider = Application.get_env(:atelier, :llm_provider)
     Logger.info("🌍 Checking health for provider: #{provider}")
