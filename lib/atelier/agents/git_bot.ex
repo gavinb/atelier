@@ -11,14 +11,15 @@ defmodule Atelier.Agents.GitBot do
     %{
       role: :git_bot,
       project_id: opts[:project_id],
-      topic: "project:#{opts[:project_id]}"
+      topic: "project:#{opts[:project_id]}",
+      project_finished: false
     }
   end
 
   def handle_cast(_msg, state), do: {:noreply, state}
 
-  def handle_info({:validation_passed, filename}, state) do
-    IO.puts("📦 GitBot: #{filename} passed validation. Preparing commit...")
+  def handle_info({:file_validated, filename}, state) do
+    IO.puts("📦 GitBot: #{filename} validated. Preparing commit...")
 
     Logger.info("Validation passed, preparing commit",
       filename: filename,
@@ -49,7 +50,7 @@ defmodule Atelier.Agents.GitBot do
         Logger.debug("Running git add", filename: filename)
 
         {add_output, status1} =
-          System.cmd("git", ["add", filename], cd: project_path, stderr_to_stdout: true)
+          System.cmd("git", ["add", filename], cd: project_path, env: nil, stderr_to_stdout: true)
 
         if status1 != 0 do
           Logger.warning("Git add had non-zero status", output: add_output, status: status1)

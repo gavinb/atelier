@@ -47,6 +47,9 @@ defmodule Atelier.Agents.Clerk do
     if Enum.empty?(remaining) do
       Logger.info("🏁 Project Complete: All files generated, validated, and committed.")
       Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, :project_finished)
+    else
+      # Project is not done yet, notify agents to process this validated file
+      Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, {:file_validated, filename})
     end
 
     {:noreply, %{state | pending_files: remaining}}

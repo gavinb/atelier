@@ -10,7 +10,7 @@ defmodule Atelier.Agents.Runner do
     }
   end
 
-  def handle_info({:validation_passed, filename}, state) do
+  def handle_info({:file_validated, filename}, state) do
     # We only run files that look like "main" or entry points,
     # or perhaps we run everything for testing.
     Logger.info("[Runner] Attempting to execute #{filename}...")
