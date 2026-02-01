@@ -61,6 +61,7 @@ defmodule Atelier.Agents.GitBot do
         {commit_output, status2} =
           System.cmd("git", ["commit", "-m", commit_msg],
             cd: project_path,
+            env: nil,
             stderr_to_stdout: true
           )
 

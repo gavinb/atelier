@@ -31,15 +31,15 @@ defmodule Atelier.Agents.Validator do
       case extension do
         ".js" ->
           Logger.debug("Running Node validation")
-          System.cmd("node", ["--check", full_path])
+          System.cmd("node", ["--check", full_path], env: nil)
 
         ".ex" ->
           Logger.debug("Running Elixir validation")
-          System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"])
+          System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"], env: nil)
 
         ".py" ->
           Logger.debug("Running Python validation")
-          System.cmd("python3", ["-m", "py_compile", full_path])
+          System.cmd("python3", ["-m", "py_compile", full_path], env: nil)
 
         _ ->
           Logger.info("No validator available", filename: filename, extension: extension)

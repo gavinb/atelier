@@ -43,12 +43,12 @@ defmodule Atelier.Storage do
     # Initialize git if it's not already there
     if !File.dir?(Path.join(path, ".git")) do
       Logger.debug("Initializing git repository", project_id: project_id, path: path)
-      {init_output, init_status} = System.cmd("git", ["init"], cd: path)
+      {init_output, init_status} = System.cmd("git", ["init"], cd: path, env: nil)
 
       if init_status == 0 do
         Logger.debug("Git repository initialized")
-        System.cmd("git", ["config", "user.name", "Atelier Bot"], cd: path)
-        System.cmd("git", ["config", "user.email", "bot@atelier.local"], cd: path)
+        System.cmd("git", ["config", "user.name", "Atelier Bot"], cd: path, env: nil)
+        System.cmd("git", ["config", "user.email", "bot@atelier.local"], cd: path, env: nil)
         Logger.debug("Git user configured")
       else
         Logger.error("Failed to initialize git repository", output: init_output)

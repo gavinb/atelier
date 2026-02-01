@@ -33,7 +33,7 @@ defmodule Atelier.Agents.Runner do
 
   defp execute_command(cmd, args, filename, state) do
     # System.cmd returns {output, exit_status}
-    case System.cmd(cmd, args, stderr_to_stdout: true) do
+    case System.cmd(cmd, args, env: nil, stderr_to_stdout: true) do
       {output, 0} ->
         Logger.info("[Runner] Execution Successful! Output:\n#{output}")
 
