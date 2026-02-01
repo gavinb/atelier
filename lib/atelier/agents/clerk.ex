@@ -52,6 +52,29 @@ defmodule Atelier.Agents.Clerk do
     {:noreply, %{state | pending_files: remaining}}
   end
 
+  def handle_info({:agent_surrender, filename, error}, state) do
+    Logger.error("[Clerk] Writer surrendered on #{filename}. Stopping project.")
+    
+    summary = """
+
+    ## Final Status
+    - **Status:** ❌ Failed - Max retries exceeded
+    - **Failed File:** #{filename}
+    - **Error:** #{error}
+    - **Timestamp:** #{DateTime.now!("Etc/UTC")}
+    - **Remaining Files:** #{inspect(state.pending_files)}
+    """
+
+    # Append to the existing manifest
+    path = Path.expand("/tmp/atelier_studio/#{state.project_id}/MANIFEST.md")
+    File.write!(path, summary, [:append])
+
+    # Broadcast project_finished to signal all agents to stop
+    Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, :project_finished)
+    
+    {:noreply, state}
+  end
+
   def handle_info(:project_finished, state) do
     summary = """
 

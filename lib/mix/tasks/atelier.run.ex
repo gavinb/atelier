@@ -38,6 +38,15 @@ defmodule Mix.Tasks.Atelier.Run do
 
   defp wait_for_completion(project_id) do
     receive do
+      :project_finished ->
+        IO.puts("\n✅ Project completed successfully!")
+
+      {:agent_surrender, filename, error} ->
+        IO.puts("\n❌ Project failed: Max retries exceeded for #{filename}")
+        IO.puts("Error: #{error}")
+        IO.puts("\nThe Writer agent was unable to fix the issue after multiple attempts.")
+        IO.puts("Please check the manifest at /tmp/atelier_studio/#{project_id}/MANIFEST.md for details.")
+
       {:project_update, %{status: :completed}} ->
         IO.puts("\n✅ Project completed successfully!")
 
