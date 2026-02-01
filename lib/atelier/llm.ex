@@ -46,7 +46,7 @@ defmodule Atelier.LLM do
     rescue
       e ->
         Logger.error("Anthropic API call failed", error: inspect(e))
-        raise e
+        reraise e, __STACKTRACE__
     end
   end
 
@@ -75,7 +75,7 @@ defmodule Atelier.LLM do
     rescue
       e ->
         Logger.error("Ollama API call failed", error: inspect(e), model: model)
-        raise e
+        reraise e, __STACKTRACE__
     end
   end
 
