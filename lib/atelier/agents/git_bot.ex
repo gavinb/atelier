@@ -7,6 +7,7 @@ defmodule Atelier.Agents.GitBot do
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :git_bot,
@@ -16,8 +17,10 @@ defmodule Atelier.Agents.GitBot do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(_msg, state), do: {:noreply, state}
 
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:file_validated, filename}, state) do
     IO.puts("📦 GitBot: #{filename} validated. Preparing commit...")
 

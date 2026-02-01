@@ -8,6 +8,7 @@ defmodule Atelier.Agents.Validator do
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :validator,
@@ -16,8 +17,10 @@ defmodule Atelier.Agents.Validator do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(_msg, state), do: {:noreply, state}
 
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:code_ready, _code, filename}, state) do
     extension = Path.extname(filename)
     IO.puts("🧪 Validator: Checking syntax for #{filename}...")

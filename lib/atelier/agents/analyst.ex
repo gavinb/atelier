@@ -7,6 +7,7 @@ defmodule Atelier.Agents.Analyst do
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :analyst,
@@ -17,7 +18,10 @@ defmodule Atelier.Agents.Analyst do
     }
   end
 
+  def handle_cast(_msg, state), do: {:noreply, state}
+
   # Collect failures as they happen
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:execution_failure, filename, output}, state) do
     entry = %{filename: filename, error: output, time: DateTime.utc_now()}
     {:noreply, %{state | failure_log: [entry | state.failure_log]}}

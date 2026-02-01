@@ -7,6 +7,7 @@ defmodule Atelier.Agents.Architect do
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :architect,
@@ -17,6 +18,7 @@ defmodule Atelier.Agents.Architect do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast({:design_spec, requirement}, state) do
     IO.puts("📐 Architect: Designing system for: #{requirement}")
     topic = state.topic
@@ -82,6 +84,7 @@ defmodule Atelier.Agents.Architect do
   end
 
   # Handle the Researcher's response
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:research_produced, _query, summary}, state) do
     Logger.info("[Architect] Research received. Designing blueprint with new knowledge...")
     # Now we pass the summary into the final blueprint generation

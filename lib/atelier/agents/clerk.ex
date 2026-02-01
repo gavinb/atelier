@@ -7,6 +7,7 @@ defmodule Atelier.Agents.Clerk do
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :clerk,
@@ -16,8 +17,10 @@ defmodule Atelier.Agents.Clerk do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(_msg, state), do: {:noreply, state}
 
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:blueprint_ready, files}, state) do
     new_state = Map.put(state, :pending_files, Enum.map(files, & &1["name"]))
 

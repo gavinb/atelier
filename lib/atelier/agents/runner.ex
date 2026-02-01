@@ -1,7 +1,13 @@
 defmodule Atelier.Agents.Runner do
+  @moduledoc """
+  Runner agent responsible for executing validated code files.
+  """
+
   require Logger
+
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :runner,
@@ -10,6 +16,10 @@ defmodule Atelier.Agents.Runner do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
+  def handle_cast(_msg, state), do: {:noreply, state}
+
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:file_validated, filename}, state) do
     # We only run files that look like "main" or entry points,
     # or perhaps we run everything for testing.

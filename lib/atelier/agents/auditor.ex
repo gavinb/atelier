@@ -8,6 +8,7 @@ defmodule Atelier.Agents.Auditor do
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :auditor,
@@ -16,8 +17,10 @@ defmodule Atelier.Agents.Auditor do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(_msg, state), do: {:noreply, state}
 
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:llm_error, reason}, state) do
     IO.puts("⚠️  Auditor: Notified of LLM failure: #{reason}")
     Logger.warning("Auditor received LLM error notification", reason: reason)

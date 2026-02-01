@@ -11,6 +11,7 @@ defmodule Atelier.Agents.Writer do
   @doc """
   Returns the initial state specific to the Writer role.
   """
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :writer,
@@ -28,6 +29,7 @@ defmodule Atelier.Agents.Writer do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast({:write_code, filename, code}, state) do
     IO.puts("✍️  Writer: Saving #{filename} to local storage...")
 
@@ -42,6 +44,7 @@ defmodule Atelier.Agents.Writer do
   def handle_cast(_msg, state), do: {:noreply, state}
 
   # Receiving suggestion from Auditor
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info({:suggestion_offered, suggestion}, state) do
     IO.puts("✍️  Writer: Received a fix from the Auditor.")
     IO.puts("📝 Suggested Fix:\n#{suggestion}")

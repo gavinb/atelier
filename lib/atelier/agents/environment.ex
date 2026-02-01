@@ -1,8 +1,13 @@
 defmodule Atelier.Agents.Environment do
+  @moduledoc """
+  Environment agent responsible for health checking LLM infrastructure.
+  """
+
   require Logger
 
   @behaviour Atelier.Agent.Worker
 
+  @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
     %{
       role: :environment,
@@ -11,6 +16,7 @@ defmodule Atelier.Agents.Environment do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(:check_health, state) do
     provider = Application.get_env(:atelier, :llm_provider)
     Logger.info("🌍 Checking health for provider: #{provider}")
@@ -48,5 +54,6 @@ defmodule Atelier.Agents.Environment do
     end
   end
 
+  @spec handle_info(term(), map()) :: {:noreply, map()}
   def handle_info(_msg, state), do: {:noreply, state}
 end
