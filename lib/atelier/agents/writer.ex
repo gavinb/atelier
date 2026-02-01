@@ -256,7 +256,7 @@ defmodule Atelier.Agents.Writer do
         code = Atelier.LLM.prompt(system, "Implement the file '#{name}': #{desc}")
 
         # Strip markdown backticks if the LLM ignores instructions
-        clean_code = String.replace(code, ~r/```[a-z]*\n|```/i, "") |> String.trim()
+        clean_code = code |> String.replace(~r/```[a-z]*\n|```/i, "") |> String.trim()
 
         Atelier.Storage.write_file(project_id, name, clean_code)
         PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, clean_code})

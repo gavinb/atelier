@@ -25,7 +25,7 @@ defmodule Atelier.Agents.Clerk do
     # Project Manifest: #{state.project_id}
 
     ## Planned Files
-    #{Enum.map(files, &"* **#{&1["name"]}**: #{&1["description"]}") |> Enum.join("\n")}
+    #{Enum.map_join(files, "\n", &"* **#{&1["name"]}**: #{&1["description"]}")}
 
     ## Progress
     """

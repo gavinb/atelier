@@ -24,44 +24,52 @@ defmodule Atelier.Agents.Auditor do
 
     case Atelier.Native.Scanner.scan_code(code, ["TODO", "FIXME"]) do
       {true, _} ->
-        IO.puts("✅ Auditor: Clean!")
-        Logger.info("Code scan passed")
+        handle_clean_scan()
 
       {false, issues} ->
-        IO.puts("⚠️  Auditor: Issues found. Spawning async LLM task...")
-
-        Logger.warning("Code issues detected",
-          issue_count: length(issues),
-          issues: inspect(issues)
-        )
-
-        # We capture the state needed so the task has context
-        topic = state.topic
-
-        Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
-          try do
-            Logger.debug("Starting LLM fix suggestion task")
-            instructions = "Senior reviewer. Forbidden: #{inspect(issues)}."
-            user_query = "Fix this and return ONLY code: \n\n #{code}"
-
-            # This call is now async!
-            suggestion = Atelier.LLM.prompt(instructions, user_query)
-
-            Logger.info("LLM fix suggestion generated",
-              suggestion_length: String.length(suggestion)
-            )
-
-            PubSub.broadcast(Atelier.PubSub, topic, {:suggestion_offered, suggestion})
-          rescue
-            e ->
-              IO.puts("❌ Auditor Error: LLM request failed. Is Ollama running? (#{inspect(e)})")
-              Logger.error("LLM request failed", error: inspect(e))
-              PubSub.broadcast(Atelier.PubSub, topic, {:llm_error, "Service unavailable"})
-          end
-        end)
+        handle_issues_found(issues, code, state.topic)
     end
 
     {:noreply, state}
+  end
+
+  defp handle_clean_scan do
+    IO.puts("✅ Auditor: Clean!")
+    Logger.info("Code scan passed")
+  end
+
+  defp handle_issues_found(issues, code, topic) do
+    IO.puts("⚠️  Auditor: Issues found. Spawning async LLM task...")
+
+    Logger.warning("Code issues detected",
+      issue_count: length(issues),
+      issues: inspect(issues)
+    )
+
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      generate_fix_suggestion(issues, code, topic)
+    end)
+  end
+
+  defp generate_fix_suggestion(issues, code, topic) do
+    try do
+      Logger.debug("Starting LLM fix suggestion task")
+      instructions = "Senior reviewer. Forbidden: #{inspect(issues)}."
+      user_query = "Fix this and return ONLY code: \n\n #{code}"
+
+      suggestion = Atelier.LLM.prompt(instructions, user_query)
+
+      Logger.info("LLM fix suggestion generated",
+        suggestion_length: String.length(suggestion)
+      )
+
+      PubSub.broadcast(Atelier.PubSub, topic, {:suggestion_offered, suggestion})
+    rescue
+      e ->
+        IO.puts("❌ Auditor Error: LLM request failed. Is Ollama running? (#{inspect(e)})")
+        Logger.error("LLM request failed", error: inspect(e))
+        PubSub.broadcast(Atelier.PubSub, topic, {:llm_error, "Service unavailable"})
+    end
   end
 
   def handle_info({:llm_error, reason}, state) do

@@ -4,6 +4,7 @@ defmodule Atelier.Storage do
   # based on where the project root is.
   @storage_root Path.expand("/tmp/atelier_studio")
 
+  @spec write_file(String.t(), String.t(), String.t()) :: {:ok, String.t()}
   def write_file(project_id, filename, content) do
     # 1. Define the directory for the project
     project_dir = Path.join(@storage_root, project_id)
@@ -29,19 +30,23 @@ defmodule Atelier.Storage do
     {:ok, path}
   end
 
+  @spec read_file(String.t(), String.t()) :: {:ok, String.t()} | {:error, File.posix()}
   def read_file(project_id, filename) do
     path = Path.join([@storage_root, project_id, filename])
     Logger.debug("Reading file", project_id: project_id, filename: filename, path: path)
     File.read(path)
   end
 
+  @spec init_workspace(String.t()) :: String.t()
   def init_workspace(project_id) do
     path = Path.expand("/tmp/atelier_studio/#{project_id}")
     Logger.info("Initializing workspace", project_id: project_id, path: path)
     File.mkdir_p!(path)
 
     # Initialize git if it's not already there
-    if !File.dir?(Path.join(path, ".git")) do
+    if File.dir?(Path.join(path, ".git")) do
+      Logger.debug("Git repository already exists", project_id: project_id)
+    else
       Logger.debug("Initializing git repository", project_id: project_id, path: path)
       {init_output, init_status} = System.cmd("git", ["init"], cd: path, env: nil)
 
@@ -53,8 +58,6 @@ defmodule Atelier.Storage do
       else
         Logger.error("Failed to initialize git repository", output: init_output)
       end
-    else
-      Logger.debug("Git repository already exists", project_id: project_id)
     end
 
     path

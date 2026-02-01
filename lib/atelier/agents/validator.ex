@@ -26,45 +26,48 @@ defmodule Atelier.Agents.Validator do
     full_path = Path.expand("/tmp/atelier_studio/#{state.project_id}/#{filename}")
     Logger.debug("Validating file at path", path: full_path)
 
-    # Determine the check command based on extension
-    result =
-      case extension do
-        ".js" ->
-          Logger.debug("Running Node validation")
-          System.cmd("node", ["--check", full_path], env: nil)
-
-        ".ex" ->
-          Logger.debug("Running Elixir validation")
-          System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"], env: nil)
-
-        ".py" ->
-          Logger.debug("Running Python validation")
-          System.cmd("python3", ["-m", "py_compile", full_path], env: nil)
-
-        _ ->
-          Logger.info("No validator available", filename: filename, extension: extension)
-          {"No validator for this file type", 0}
-      end
-
-    case result do
-      {_output, 0} ->
-        IO.puts("✅ Validator: #{filename} syntax is valid.")
-        Logger.info("Validation passed", filename: filename)
-        PubSub.broadcast(Atelier.PubSub, state.topic, {:validation_passed, filename})
-
-      {error_msg, exit_code} ->
-        IO.puts("❌ Validator: #{filename} has syntax errors!")
-
-        Logger.warning("Validation failed",
-          filename: filename,
-          exit_code: exit_code,
-          error: error_msg
-        )
-
-        PubSub.broadcast(Atelier.PubSub, state.topic, {:validation_failed, filename, error_msg})
-    end
+    result = run_validation(extension, full_path, filename)
+    handle_validation_result(result, filename, state.topic)
 
     {:noreply, state}
+  end
+
+  defp run_validation(extension, full_path, filename) do
+    case extension do
+      ".js" ->
+        Logger.debug("Running Node validation")
+        System.cmd("node", ["--check", full_path], env: nil)
+
+      ".ex" ->
+        Logger.debug("Running Elixir validation")
+        System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"], env: nil)
+
+      ".py" ->
+        Logger.debug("Running Python validation")
+        System.cmd("python3", ["-m", "py_compile", full_path], env: nil)
+
+      _ ->
+        Logger.info("No validator available", filename: filename, extension: extension)
+        {"No validator for this file type", 0}
+    end
+  end
+
+  defp handle_validation_result({_output, 0}, filename, topic) do
+    IO.puts("✅ Validator: #{filename} syntax is valid.")
+    Logger.info("Validation passed", filename: filename)
+    PubSub.broadcast(Atelier.PubSub, topic, {:validation_passed, filename})
+  end
+
+  defp handle_validation_result({error_msg, exit_code}, filename, topic) do
+    IO.puts("❌ Validator: #{filename} has syntax errors!")
+
+    Logger.warning("Validation failed",
+      filename: filename,
+      exit_code: exit_code,
+      error: error_msg
+    )
+
+    PubSub.broadcast(Atelier.PubSub, topic, {:validation_failed, filename, error_msg})
   end
 
   def handle_info(_msg, state), do: {:noreply, state}

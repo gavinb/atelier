@@ -2,6 +2,7 @@ defmodule Atelier.LLM do
   require Logger
 
   @doc "Main entry point to talk to any LLM"
+  @spec prompt(String.t(), String.t(), keyword()) :: String.t()
   def prompt(system_instructions, user_input, opts \\ []) do
     provider = opts[:provider] || Application.get_env(:atelier, :llm_provider, :ollama)
 
@@ -79,6 +80,7 @@ defmodule Atelier.LLM do
     end
   end
 
+  @spec clean_code(String.t()) :: String.t()
   def clean_code(text) do
     # 1. Try to extract content between triple backticks
     # 2. If no backticks, just trim the whitespace
