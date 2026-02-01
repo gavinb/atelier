@@ -57,7 +57,7 @@ defmodule Atelier.Agents.Clerk do
 
   def handle_info({:agent_surrender, filename, error}, state) do
     Logger.error("[Clerk] Writer surrendered on #{filename}. Stopping project.")
-    
+
     summary = """
 
     ## Final Status
@@ -74,7 +74,7 @@ defmodule Atelier.Agents.Clerk do
 
     # Broadcast project_finished to signal all agents to stop
     Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, :project_finished)
-    
+
     {:noreply, state}
   end
 

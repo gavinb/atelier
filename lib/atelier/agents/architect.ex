@@ -3,6 +3,7 @@ defmodule Atelier.Agents.Architect do
   Architect agent responsible for designing system blueprints.
   """
   alias Phoenix.PubSub
+  require Logger
 
   @behaviour Atelier.Agent.Worker
 
@@ -88,8 +89,6 @@ defmodule Atelier.Agents.Architect do
     {:noreply, state}
   end
 
-  def handle_cast(_msg, state), do: {:noreply, state}
-
   def handle_info(_msg, state), do: {:noreply, state}
 
   defp generate_blueprint(requirement, research_summary, state) do
@@ -117,7 +116,8 @@ defmodule Atelier.Agents.Architect do
       # 3. Robust JSON extraction
       json_cleaned =
         blueprint_raw
-        |> String.replace(~r/```json|```/, "") # Strip backticks first
+        # Strip backticks first
+        |> String.replace(~r/```json|```/, "")
         |> String.trim()
         |> then(fn s ->
           # If the LLM added chatter, extract only the JSON object

@@ -60,6 +60,7 @@ defmodule Mix.Tasks.Export do
     case System.cmd("zip", args -- ["zip"], env: nil, stderr_to_stdout: true) do
       {_output, 0} ->
         Mix.shell().info("Successfully created #{filename}")
+
       {output, code} ->
         Mix.shell().error("Failed to create archive (exit code: #{code})")
         Mix.shell().error(output)

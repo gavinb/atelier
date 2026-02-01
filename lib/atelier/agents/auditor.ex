@@ -18,6 +18,12 @@ defmodule Atelier.Agents.Auditor do
 
   def handle_cast(_msg, state), do: {:noreply, state}
 
+  def handle_info({:llm_error, reason}, state) do
+    IO.puts("⚠️  Auditor: Notified of LLM failure: #{reason}")
+    Logger.warning("Auditor received LLM error notification", reason: reason)
+    {:noreply, state}
+  end
+
   def handle_info({:code_ready, code}, state) do
     IO.puts("🔍 Auditor: Running infra-scan...")
     Logger.debug("Starting code scan", code_length: String.length(code))
@@ -71,12 +77,4 @@ defmodule Atelier.Agents.Auditor do
         PubSub.broadcast(Atelier.PubSub, topic, {:llm_error, "Service unavailable"})
     end
   end
-
-  def handle_info({:llm_error, reason}, state) do
-    IO.puts("⚠️  Auditor: Notified of LLM failure: #{reason}")
-    Logger.warning("Auditor received LLM error notification", reason: reason)
-    {:noreply, state}
-  end
-
-  def handle_info(_msg, state), do: {:noreply, state}
 end

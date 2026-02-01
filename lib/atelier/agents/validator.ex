@@ -32,6 +32,8 @@ defmodule Atelier.Agents.Validator do
     {:noreply, state}
   end
 
+  def handle_info(_msg, state), do: {:noreply, state}
+
   defp run_validation(extension, full_path, filename) do
     case extension do
       ".js" ->
@@ -69,6 +71,4 @@ defmodule Atelier.Agents.Validator do
 
     PubSub.broadcast(Atelier.PubSub, topic, {:validation_failed, filename, error_msg})
   end
-
-  def handle_info(_msg, state), do: {:noreply, state}
 end
