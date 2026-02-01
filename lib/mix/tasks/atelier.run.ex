@@ -15,24 +15,38 @@ defmodule Mix.Tasks.Atelier.Run do
 
     # 3. Start the project
     Atelier.Studio.start_project(project_id)
-    Atelier.Studio.request_feature(project_id, requirement)
 
-    Logger.info("🚀 Studio started for: #{project_id}")
+    # 1. Trigger the Health Check
+    env_pid = GenServer.whereis({:global, {project_id, :environment}})
+    GenServer.cast(env_pid, :check_health)
 
-    # 4. Wait for the 'project_finished' message
-    wait_for_completion()
+    wait_for_infra(project_id, requirement)
   end
 
-  defp wait_for_completion do
+  defp wait_for_infra(project_id, requirement) do
     receive do
-      :project_finished ->
-        IO.puts("\n🎉 All agents have finished their work. Check the 'tmp' folder.")
+      :infra_ready ->
+        IO.puts("🚀 Infra ready. Architecting...")
+        Atelier.Studio.request_feature(project_id, requirement)
+        wait_for_completion(project_id)
 
-      {:llm_error, reason} ->
-        IO.puts("\n❌ Error: #{reason}")
+      {:infra_error, reason} ->
+        IO.puts("\n🛑 ABORTED: #{reason}")
+        IO.puts("Please check your local Ollama instance or API keys.")
+    end
+  end
 
-      _ ->
-        wait_for_completion()
+  defp wait_for_completion(project_id) do
+    receive do
+      {:project_update, %{status: :completed}} ->
+        IO.puts("\n✅ Project completed successfully!")
+
+      {:project_update, %{status: :failed, error: reason}} ->
+        IO.puts("\n❌ Project failed: #{reason}")
+
+      {:project_update, _update} ->
+        # Log other updates if necessary, or just keep waiting
+        wait_for_completion(project_id)
     end
   end
 end
