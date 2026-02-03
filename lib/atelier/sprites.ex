@@ -53,7 +53,7 @@ defmodule Atelier.Sprites do
 
     case request(:put, "/sprites/#{name}") do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
-        Logger.info("Sprite created", sprite: name)
+        Logger.info("Sprite created successfully", sprite: name, status: status)
         {:ok, body}
 
       {:ok, %{status: 409}} ->
@@ -61,12 +61,35 @@ defmodule Atelier.Sprites do
         Logger.debug("Sprite already exists", sprite: name)
         {:ok, %{"name" => name, "status" => "exists"}}
 
+      {:ok, %{status: 401, body: body}} ->
+        Logger.error("Sprite authentication failed - check SPRITES_TOKEN",
+          sprite: name,
+          status: 401,
+          error: inspect(body)
+        )
+        {:error, {:auth_failed, body}}
+
+      {:ok, %{status: 403, body: body}} ->
+        Logger.error("Sprite access forbidden - token may lack permissions",
+          sprite: name,
+          status: 403,
+          error: inspect(body)
+        )
+        {:error, {:forbidden, body}}
+
       {:ok, %{status: status, body: body}} ->
-        Logger.error("Failed to create sprite", sprite: name, status: status, body: body)
+        Logger.error("Failed to create sprite",
+          sprite: name,
+          status: status,
+          response: inspect(body)
+        )
         {:error, {:http_error, status, body}}
 
       {:error, reason} ->
-        Logger.error("Failed to create sprite", sprite: name, error: reason)
+        Logger.error("Failed to create sprite - network error",
+          sprite: name,
+          error: inspect(reason)
+        )
         {:error, reason}
     end
   end
@@ -103,7 +126,7 @@ defmodule Atelier.Sprites do
   @spec exec(sprite_name(), String.t(), Keyword.t()) :: exec_result()
   def exec(name, command, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, @timeout)
-    Logger.debug("Executing command in sprite", sprite: name, command: command)
+    Logger.debug("Executing command in sprite", sprite: name, command: String.slice(command, 0, 100))
 
     body = %{command: command}
 
@@ -113,13 +136,23 @@ defmodule Atelier.Sprites do
         {:ok, output}
 
       {:ok, %{status: 200, body: %{"exit_code" => code, "output" => output}}} ->
-        Logger.debug("Command failed", sprite: name, exit_code: code)
+        Logger.debug("Command failed", sprite: name, exit_code: code, output: String.slice(output, 0, 200))
         {:error, {:execution_failed, code, output}}
 
+      {:ok, %{status: 401, body: body}} ->
+        Logger.error("Sprite exec auth failed", sprite: name, error: inspect(body))
+        {:error, {:http_error, 401, body}}
+
+      {:ok, %{status: 404, body: body}} ->
+        Logger.error("Sprite not found - may not exist or not be started", sprite: name)
+        {:error, {:sprite_not_found, body}}
+
       {:ok, %{status: status, body: body}} ->
+        Logger.error("Sprite exec failed", sprite: name, status: status, response: inspect(body))
         {:error, {:http_error, status, body}}
 
       {:error, reason} ->
+        Logger.error("Sprite exec network error", sprite: name, error: inspect(reason))
         {:error, reason}
     end
   end
@@ -265,8 +298,20 @@ defmodule Atelier.Sprites do
   end
 
   defp token do
-    Application.get_env(:atelier, __MODULE__, [])[:token] ||
-      System.get_env("SPRITES_TOKEN") ||
-      raise "SPRITES_TOKEN not configured"
+    case Application.get_env(:atelier, __MODULE__, [])[:token] do
+      nil ->
+        raise """
+        SPRITES_TOKEN not configured.
+
+        Add to .env file: SPRITES_TOKEN=org/account-id/token-id/token-value
+        """
+
+      token when byte_size(token) < 50 ->
+        Logger.warning("SPRITES_TOKEN appears truncated (#{String.length(token)} chars)")
+        token
+
+      token ->
+        token
+    end
   end
 end

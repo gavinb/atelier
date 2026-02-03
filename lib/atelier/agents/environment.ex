@@ -1,9 +1,11 @@
 defmodule Atelier.Agents.Environment do
   @moduledoc """
-  Environment agent responsible for health checking LLM infrastructure.
+  Environment agent responsible for health checking LLM and Sprites infrastructure.
   """
 
   require Logger
+
+  alias Atelier.Sprites
 
   @behaviour Atelier.Agent.Worker
 
@@ -21,11 +23,11 @@ defmodule Atelier.Agents.Environment do
     provider = Application.get_env(:atelier, :llm_provider)
     Logger.info("🌍 Checking health for provider: #{provider}")
 
-    case check_provider(provider) do
-      :ok ->
-        Logger.info("✅ Infrastructure is healthy.")
-        Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, :infra_ready)
-
+    with :ok <- check_provider(provider),
+         :ok <- check_sprites(state.project_id) do
+      Logger.info("✅ Infrastructure is healthy.")
+      Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, :infra_ready)
+    else
       {:error, reason} ->
         Logger.error("❌ Infrastructure check failed: #{reason}")
         Phoenix.PubSub.broadcast(Atelier.PubSub, state.topic, {:infra_error, reason})
@@ -33,6 +35,8 @@ defmodule Atelier.Agents.Environment do
 
     {:noreply, state}
   end
+
+  def handle_cast(_msg, state), do: {:noreply, state}
 
   defp check_provider(:ollama) do
     endpoint = Application.get_env(:atelier, :ollama_endpoint, "http://localhost:11434")
@@ -47,10 +51,36 @@ defmodule Atelier.Agents.Environment do
     api_key = Application.get_env(:atelier, :anthropic_api_key)
 
     if api_key && String.length(api_key) > 0 do
-      # A simple 'headers only' or dummy request to verify the key
       :ok
     else
       {:error, "Anthropic API Key is missing or empty"}
+    end
+  end
+
+  # Check Sprites connectivity if enabled
+  defp check_sprites(project_id) do
+    if Sprites.enabled?() do
+      Logger.info("👻 Checking Sprites.dev connectivity...")
+      sprite_name = "atelier-#{project_id}"
+
+      # Try to create or verify the sprite exists
+      case Sprites.create(sprite_name) do
+        {:ok, _} ->
+          Logger.info("✅ Sprites.dev connection verified", sprite: sprite_name)
+          :ok
+
+        {:error, {:auth_failed, _}} ->
+          {:error, "Sprites.dev authentication failed - check SPRITES_TOKEN in .env"}
+
+        {:error, {:forbidden, _}} ->
+          {:error, "Sprites.dev access forbidden - token may lack permissions"}
+
+        {:error, reason} ->
+          {:error, "Sprites.dev connection failed: #{inspect(reason)}"}
+      end
+    else
+      # Sprites not enabled, skip check
+      :ok
     end
   end
 

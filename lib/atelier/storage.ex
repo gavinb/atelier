@@ -131,32 +131,93 @@ defmodule Atelier.Storage do
         Logger.debug("File written to sprite", sprite: sprite_name, path: path)
         {:ok, path}
 
-      {:error, reason} ->
-        Logger.error("Failed to write file to sprite", error: inspect(reason))
-        {:error, reason}
+      {:error, {:http_error, 401, _}} = error ->
+        Logger.error("Sprite write failed: authentication error",
+          sprite: sprite_name,
+          path: path,
+          hint: "Check SPRITES_TOKEN in .env file"
+        )
+        error
+
+      {:error, {:sprite_not_found, _}} = error ->
+        Logger.error("Sprite write failed: sprite not found",
+          sprite: sprite_name,
+          path: path,
+          hint: "Sprite may not have been created - check Environment agent health check"
+        )
+        error
+
+      {:error, reason} = error ->
+        Logger.error("Failed to write file to sprite",
+          sprite: sprite_name,
+          path: path,
+          error: inspect(reason)
+        )
+        error
     end
   end
 
   defp read_file_sprite(project_id, filename) do
     sprite_name = sprite_name(project_id)
     path = "/workspace/#{filename}"
-    Sprites.read_file(sprite_name, path)
+
+    case Sprites.read_file(sprite_name, path) do
+      {:ok, content} ->
+        Logger.debug("File read from sprite", sprite: sprite_name, path: path, size: byte_size(content))
+        {:ok, content}
+
+      {:error, {:file_error, output}} = error ->
+        Logger.error("Sprite read failed: file not found",
+          sprite: sprite_name,
+          path: path,
+          output: output
+        )
+        error
+
+      {:error, reason} = error ->
+        Logger.error("Failed to read file from sprite",
+          sprite: sprite_name,
+          path: path,
+          error: inspect(reason)
+        )
+        error
+    end
   end
 
   defp init_workspace_sprite(project_id) do
     sprite_name = sprite_name(project_id)
+    Logger.info("Creating sprite for project", sprite: sprite_name, project_id: project_id)
 
     # Create the sprite first
     case Sprites.create(sprite_name) do
       {:ok, _} ->
+        Logger.info("Sprite created, initializing workspace", sprite: sprite_name)
         # Initialize workspace inside the sprite
         case Sprites.init_workspace(sprite_name) do
-          {:ok, path} -> path
-          {:error, reason} -> {:error, reason}
+          {:ok, path} ->
+            Logger.info("Sprite workspace initialized", sprite: sprite_name, path: path)
+            path
+
+          {:error, reason} ->
+            Logger.error("Failed to initialize sprite workspace",
+              sprite: sprite_name,
+              error: inspect(reason)
+            )
+            {:error, reason}
         end
 
+      {:error, {:auth_failed, _}} = error ->
+        Logger.error("Sprite creation failed: authentication error",
+          sprite: sprite_name,
+          hint: "Check SPRITES_TOKEN in .env file"
+        )
+        error
+
       {:error, reason} ->
-        Logger.error("Failed to create sprite", error: inspect(reason))
+        Logger.error("Failed to create sprite",
+          sprite: sprite_name,
+          error: inspect(reason)
+        )
         {:error, reason}
     end
   end

@@ -27,6 +27,7 @@ defmodule Atelier.MixProject do
       {:phoenix_pubsub, "~> 2.2"},
       {:req, "~> 0.5.17"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dotenvy, "~> 0.8"},
 
       # Dashboard (optional)
       {:phoenix, "~> 1.7"},

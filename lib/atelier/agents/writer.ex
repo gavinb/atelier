@@ -140,34 +140,16 @@ defmodule Atelier.Agents.Writer do
       project_id = state.project_id
 
       # We read what we last wrote to provide context to the LLM
-      {:ok, current_code} = Atelier.Storage.read_file(project_id, filename)
+      case Atelier.Storage.read_file(project_id, filename) do
+        {:ok, current_code} ->
+          attempt_validation_fix(filename, error_msg, current_code, topic, project_id)
 
-      Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
-        system = "You are a debugger. Fix the provided code based on the compiler error."
-
-        prompt = """
-        File: #{filename}
-        Error: #{error_msg}
-
-        Current Code:
-        #{current_code}
-
-        Please provide the corrected version. Output ONLY the code.
-        """
-
-        try do
-          raw_response = Atelier.LLM.prompt(system, prompt)
-          fixed_code = Atelier.LLM.clean_code(raw_response)
-
-          # Overwrite the bad file with the fix
-          Atelier.Storage.write_file(project_id, filename, fixed_code)
-
-          # Re-broadcast to trigger the Auditor and Validator again
-          PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, fixed_code, filename})
-        rescue
-          e -> IO.puts("❌ Writer: Auto-fix failed for #{filename}: #{inspect(e)}")
-        end
-      end)
+        {:error, read_error} ->
+          Logger.error("Cannot read file for validation fix",
+            filename: filename,
+            error: inspect(read_error)
+          )
+      end
 
       {:noreply, %{state | retries: Map.put(state.retries, filename, new_attempts)}}
     else
@@ -210,8 +192,17 @@ defmodule Atelier.Agents.Writer do
       new_attempts = current_attempts + 1
       Logger.warning("[Writer] Attempt #{new_attempts}/#{state.max_retries} to fix #{filename}")
 
-      # Proceed with the LLM call...
-      perform_repair(filename, output, state)
+      # Proceed with the LLM call if we can read the file
+      case Atelier.Storage.read_file(state.project_id, filename) do
+        {:ok, failed_code} ->
+          perform_repair(filename, failed_code, output, state)
+
+        {:error, read_error} ->
+          Logger.error("Cannot read file for execution fix",
+            filename: filename,
+            error: inspect(read_error)
+          )
+      end
 
       # Update state with the new attempt count
       {:noreply, %{state | retries: Map.put(state.retries, filename, new_attempts)}}
@@ -269,12 +260,38 @@ defmodule Atelier.Agents.Writer do
     end)
   end
 
-  defp perform_repair(filename, output, state) do
+  defp attempt_validation_fix(filename, error_msg, current_code, topic, project_id) do
+    Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
+      system = "You are a debugger. Fix the provided code based on the compiler error."
+
+      prompt = """
+      File: #{filename}
+      Error: #{error_msg}
+
+      Current Code:
+      #{current_code}
+
+      Please provide the corrected version. Output ONLY the code.
+      """
+
+      try do
+        raw_response = Atelier.LLM.prompt(system, prompt)
+        fixed_code = Atelier.LLM.clean_code(raw_response)
+
+        # Overwrite the bad file with the fix
+        Atelier.Storage.write_file(project_id, filename, fixed_code)
+
+        # Re-broadcast to trigger the Auditor and Validator again
+        PubSub.broadcast(Atelier.PubSub, topic, {:code_ready, fixed_code, filename})
+      rescue
+        e -> IO.puts("❌ Writer: Auto-fix failed for #{filename}: #{inspect(e)}")
+      end
+    end)
+  end
+
+  defp perform_repair(filename, failed_code, output, state) do
     project_id = state.project_id
     topic = state.topic
-
-    # 1. Grab the code that just failed
-    {:ok, failed_code} = Atelier.Storage.read_file(project_id, filename)
 
     Task.Supervisor.start_child(Atelier.LLMTaskSupervisor, fn ->
       system_prompt = """

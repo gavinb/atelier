@@ -35,7 +35,9 @@ config :logger, :console,
     :commit_output,
     :model,
     :agent_count,
-    :requirement_length
+    :requirement_length,
+    :sprite,
+    :response
   ],
   colors: [enabled: true, info: :green, debug: :cyan, error: :red]
 
@@ -48,6 +50,9 @@ config :atelier,
   # Set to true to auto-start the dashboard, or start manually with:
   # AtelierWeb.Endpoint.start_link([])
   start_dashboard: false
+
+config :atelier, Atelier.Sprites,
+  enabled: true
 
 # Dashboard configuration
 config :atelier, AtelierWeb.Endpoint,
