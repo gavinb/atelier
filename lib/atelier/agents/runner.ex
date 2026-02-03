@@ -6,12 +6,12 @@ defmodule Atelier.Agents.Runner do
   - Local: Runs code directly on the host machine (default)
   - Sprites: Runs code in an isolated sandbox via sprites.dev
 
-  Set `config :atelier, Atelier.Sprites, enabled: true` to use sandboxed execution.
+  Set `config :atelier, :sprites, enabled: true` to use sandboxed execution.
   """
 
   require Logger
 
-  alias Atelier.Sprites
+  alias Atelier.Storage
 
   @behaviour Atelier.Agent.Worker
 
@@ -21,7 +21,7 @@ defmodule Atelier.Agents.Runner do
       role: :runner,
       project_id: opts[:project_id],
       topic: "project:#{opts[:project_id]}",
-      sandbox: Sprites.enabled?()
+      sandbox: Storage.sprites_enabled?()
     }
   end
 
@@ -50,21 +50,21 @@ defmodule Atelier.Agents.Runner do
 
   # Execute using Sprites sandbox
   defp execute(runtime, filename, %{sandbox: true} = state) do
-    sprite_name = "atelier-#{state.project_id}"
-    command = "cd /workspace && #{runtime} #{filename}"
+    case Storage.get_sprite(state.project_id) do
+      nil ->
+        Logger.error("[Runner] Sprites not configured")
+        broadcast_failure(filename, "Sprites not configured", state)
 
-    case Sprites.exec(sprite_name, command) do
-      {:ok, output} ->
-        Logger.info("[Runner] Sandbox execution successful", output: output)
-        broadcast_success(filename, output, state)
+      sprite ->
+        {output, exit_code} = Sprites.cmd(sprite, runtime, [filename], dir: "/workspace")
 
-      {:error, {:execution_failed, _code, output}} ->
-        Logger.error("[Runner] Sandbox execution failed", output: output)
-        broadcast_failure(filename, output, state)
-
-      {:error, reason} ->
-        Logger.error("[Runner] Sandbox error", error: inspect(reason))
-        broadcast_failure(filename, "Sandbox error: #{inspect(reason)}", state)
+        if exit_code == 0 do
+          Logger.info("[Runner] Sandbox execution successful", output: output)
+          broadcast_success(filename, output, state)
+        else
+          Logger.error("[Runner] Sandbox execution failed", output: output, exit_code: exit_code)
+          broadcast_failure(filename, output, state)
+        end
     end
   end
 

@@ -19,6 +19,6 @@ end
 
 # Sprites.dev configuration
 if token = System.get_env("SPRITES_TOKEN") do
-  config :atelier, Atelier.Sprites,
+  config :atelier, :sprites,
     token: token
 end

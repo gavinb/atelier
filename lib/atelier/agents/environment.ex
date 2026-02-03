@@ -5,7 +5,7 @@ defmodule Atelier.Agents.Environment do
 
   require Logger
 
-  alias Atelier.Sprites
+  alias Atelier.Storage
 
   @behaviour Atelier.Agent.Worker
 
@@ -59,24 +59,24 @@ defmodule Atelier.Agents.Environment do
 
   # Check Sprites connectivity if enabled
   defp check_sprites(project_id) do
-    if Sprites.enabled?() do
+    if Storage.sprites_enabled?() do
       Logger.info("👻 Checking Sprites.dev connectivity...")
       sprite_name = "atelier-#{project_id}"
 
-      # Try to create or verify the sprite exists
-      case Sprites.create(sprite_name) do
-        {:ok, _} ->
-          Logger.info("✅ Sprites.dev connection verified", sprite: sprite_name)
-          :ok
+      case Storage.sprites_client() do
+        nil ->
+          {:error, "Sprites enabled but SPRITES_TOKEN not configured"}
 
-        {:error, {:auth_failed, _}} ->
-          {:error, "Sprites.dev authentication failed - check SPRITES_TOKEN in .env"}
+        client ->
+          # Try to create or verify the sprite exists
+          case Sprites.create(client, sprite_name) do
+            {:ok, _} ->
+              Logger.info("✅ Sprites.dev connection verified", sprite: sprite_name)
+              :ok
 
-        {:error, {:forbidden, _}} ->
-          {:error, "Sprites.dev access forbidden - token may lack permissions"}
-
-        {:error, reason} ->
-          {:error, "Sprites.dev connection failed: #{inspect(reason)}"}
+            {:error, reason} ->
+              {:error, "Sprites.dev connection failed: #{inspect(reason)}"}
+          end
       end
     else
       # Sprites not enabled, skip check

@@ -51,7 +51,7 @@ config :atelier,
   # AtelierWeb.Endpoint.start_link([])
   start_dashboard: false
 
-config :atelier, Atelier.Sprites,
+config :atelier, :sprites,
   enabled: true
 
 # Dashboard configuration

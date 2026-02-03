@@ -26,6 +26,7 @@ defmodule Atelier.MixProject do
       {:rustler, "~> 0.37.1", runtime: false},
       {:phoenix_pubsub, "~> 2.2"},
       {:req, "~> 0.5.17"},
+      {:sprites, git: "https://github.com/superfly/sprites-ex.git"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dotenvy, "~> 0.8"},
 
