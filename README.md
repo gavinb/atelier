@@ -22,8 +22,12 @@ Atelier is an Elixir-based multi-agent code generation system. It uses a team of
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/gavinb/atelier.git
 cd atelier
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your tokens (see Configuration below)
 
 # Install dependencies (compiles Rust NIF automatically)
 mix deps.get
@@ -31,6 +35,18 @@ mix compile
 ```
 
 ## Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and fill in the values you need:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SPRITES_TOKEN` | For sandboxed execution | Get one at [sprites.dev](https://sprites.dev) or via `sprite login` |
+| `ANTHROPIC_API_KEY` | For Anthropic provider | From [console.anthropic.com](https://console.anthropic.com) |
+| `OLLAMA_URL` | No | Ollama endpoint (default: `http://localhost:11434`) |
+
+### LLM Provider
 
 Edit `config/config.exs` to change LLM settings:
 
@@ -42,7 +58,13 @@ config :atelier,
   llm_timeout: 120_000          # LLM request timeout in ms (default: 2 minutes)
 ```
 
-For Anthropic, set the `ANTHROPIC_API_KEY` environment variable.
+### Sandboxed Execution (Sprites)
+
+By default, Atelier runs generated code in isolated [Sprites.dev](https://sprites.dev) sandboxes. To disable sandboxing and run locally instead, set in `config/config.exs`:
+
+```elixir
+config :atelier, :sprites, enabled: false
+```
 
 ## Usage
 
@@ -168,10 +190,6 @@ mix assets.build
 mix export
 ```
 
-## Known Issues
-
-No major known issues at this time.
-
 ## License
 
-MIT
+[MIT](LICENSE)

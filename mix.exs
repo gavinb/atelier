@@ -7,6 +7,9 @@ defmodule Atelier.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
+      description: "Multi-agent code generation system powered by LLMs",
+      source_url: "https://github.com/gavinb/atelier",
+      homepage_url: "https://github.com/gavinb/atelier",
       aliases: aliases(),
       deps: deps()
     ]
