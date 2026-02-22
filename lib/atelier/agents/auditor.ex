@@ -32,7 +32,9 @@ defmodule Atelier.Agents.Auditor do
     IO.puts("🔍 Auditor: Running infra-scan...")
     Logger.debug("Starting code scan", code_length: String.length(code))
 
-    case Atelier.Native.Scanner.scan_code(code, ["TODO", "FIXME"]) do
+    alias Atelier.Native.Scanner
+
+    case Scanner.scan_code(code, ["TODO", "FIXME"]) do
       {true, _} ->
         handle_clean_scan()
 
@@ -65,23 +67,21 @@ defmodule Atelier.Agents.Auditor do
   end
 
   defp generate_fix_suggestion(issues, code, topic) do
-    try do
-      Logger.debug("Starting LLM fix suggestion task")
-      instructions = "Senior reviewer. Forbidden: #{inspect(issues)}."
-      user_query = "Fix this and return ONLY code: \n\n #{code}"
+    Logger.debug("Starting LLM fix suggestion task")
+    instructions = "Senior reviewer. Forbidden: #{inspect(issues)}."
+    user_query = "Fix this and return ONLY code: \n\n #{code}"
 
-      suggestion = Atelier.LLM.prompt(instructions, user_query)
+    suggestion = Atelier.LLM.prompt(instructions, user_query)
 
-      Logger.info("LLM fix suggestion generated",
-        suggestion_length: String.length(suggestion)
-      )
+    Logger.info("LLM fix suggestion generated",
+      suggestion_length: String.length(suggestion)
+    )
 
-      PubSub.broadcast(Atelier.PubSub, topic, {:suggestion_offered, suggestion})
-    rescue
-      e ->
-        IO.puts("❌ Auditor Error: LLM request failed. Is Ollama running? (#{inspect(e)})")
-        Logger.error("LLM request failed", error: inspect(e))
-        PubSub.broadcast(Atelier.PubSub, topic, {:llm_error, "Service unavailable"})
-    end
+    PubSub.broadcast(Atelier.PubSub, topic, {:suggestion_offered, suggestion})
+  rescue
+    e ->
+      IO.puts("❌ Auditor Error: LLM request failed. Is Ollama running? (#{inspect(e)})")
+      Logger.error("LLM request failed", error: inspect(e))
+      PubSub.broadcast(Atelier.PubSub, topic, {:llm_error, "Service unavailable"})
   end
 end

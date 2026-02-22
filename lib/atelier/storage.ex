@@ -154,13 +154,15 @@ defmodule Atelier.Storage do
     path = Path.join(@storage_root, project_id)
     File.mkdir_p!(path)
 
-    unless File.dir?(Path.join(path, ".git")) do
+    git_dir = Path.join(path, ".git")
+
+    unless File.dir?(git_dir) do
       Logger.debug("Initializing git repository", project_id: project_id, path: path)
-      {_output, status} = System.cmd("git", ["init"], cd: path)
+      {_output, status} = System.cmd("git", ["init"], cd: path, env: [])
 
       if status == 0 do
-        System.cmd("git", ["config", "user.name", "Atelier Bot"], cd: path)
-        System.cmd("git", ["config", "user.email", "bot@atelier.local"], cd: path)
+        System.cmd("git", ["config", "user.name", "Atelier Bot"], cd: path, env: [])
+        System.cmd("git", ["config", "user.email", "bot@atelier.local"], cd: path, env: [])
         Logger.debug("Git repository initialized")
       end
     end
