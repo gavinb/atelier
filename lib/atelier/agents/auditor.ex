@@ -3,10 +3,11 @@ defmodule Atelier.Agents.Auditor do
   Auditor agent responsible for code scanning and suggesting fixes.
   """
 
-  require Logger
+  @behaviour Atelier.Agent.Worker
+
   alias Phoenix.PubSub
 
-  @behaviour Atelier.Agent.Worker
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do

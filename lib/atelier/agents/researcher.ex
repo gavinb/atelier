@@ -6,9 +6,9 @@ defmodule Atelier.Agents.Researcher do
   abstracts, definitions, and related topics without requiring an API key.
   """
 
-  require Logger
-
   @behaviour Atelier.Agent.Worker
+
+  require Logger
 
   @duckduckgo_api "https://api.duckduckgo.com/"
 
@@ -21,6 +21,7 @@ defmodule Atelier.Agents.Researcher do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(_msg, state), do: {:noreply, state}
 
   # The Architect sends a request for information

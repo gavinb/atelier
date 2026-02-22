@@ -9,11 +9,11 @@ defmodule Atelier.Agents.Runner do
   Set `config :atelier, :sprites, enabled: true` to use sandboxed execution.
   """
 
-  require Logger
+  @behaviour Atelier.Agent.Worker
 
   alias Atelier.Storage
 
-  @behaviour Atelier.Agent.Worker
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do

@@ -3,11 +3,11 @@ defmodule Atelier.Agents.Environment do
   Environment agent responsible for health checking LLM and Sprites infrastructure.
   """
 
-  require Logger
+  @behaviour Atelier.Agent.Worker
 
   alias Atelier.Storage
 
-  @behaviour Atelier.Agent.Worker
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do

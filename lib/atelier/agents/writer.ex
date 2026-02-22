@@ -3,10 +3,11 @@ defmodule Atelier.Agents.Writer do
   Writer agent responsible for code generation, blueprint processing, and validation fixes.
   """
 
-  alias Phoenix.PubSub
-  require Logger
-
   @behaviour Atelier.Agent.Worker
+
+  alias Phoenix.PubSub
+
+  require Logger
 
   @doc """
   Returns the initial state specific to the Writer role.

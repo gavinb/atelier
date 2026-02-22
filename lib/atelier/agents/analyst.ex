@@ -3,9 +3,9 @@ defmodule Atelier.Agents.Analyst do
   Analyst agent responsible for collecting failures and generating post-mortem reports.
   """
 
-  require Logger
-
   @behaviour Atelier.Agent.Worker
+
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
@@ -18,6 +18,7 @@ defmodule Atelier.Agents.Analyst do
     }
   end
 
+  @spec handle_cast(term(), map()) :: {:noreply, map()}
   def handle_cast(_msg, state), do: {:noreply, state}
 
   # Collect failures as they happen

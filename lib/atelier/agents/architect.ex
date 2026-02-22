@@ -2,10 +2,11 @@ defmodule Atelier.Agents.Architect do
   @moduledoc """
   Architect agent responsible for designing system blueprints.
   """
-  alias Phoenix.PubSub
-  require Logger
-
   @behaviour Atelier.Agent.Worker
+
+  alias Phoenix.PubSub
+
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do

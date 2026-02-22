@@ -1,4 +1,8 @@
 defmodule Atelier.Agent.Worker do
+  @moduledoc """
+  Behaviour for role-specific agent implementation modules.
+  """
+
   @callback init_state(opts :: Keyword.t()) :: map()
 end
 
@@ -8,8 +12,10 @@ defmodule Atelier.Agent do
   """
 
   use GenServer
-  require Logger
+
   alias Phoenix.PubSub
+
+  require Logger
 
   @role_modules %{
     environment: Atelier.Agents.Environment,
@@ -30,7 +36,7 @@ defmodule Atelier.Agent do
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  @impl true
+  @impl GenServer
   def init(opts) do
     role = opts[:role]
     project_id = opts[:project_id]
@@ -52,7 +58,7 @@ defmodule Atelier.Agent do
   end
 
   # Delegate all casts to the role-specific module
-  @impl true
+  @impl GenServer
   def handle_cast(msg, state) do
     message_type = if is_tuple(msg), do: elem(msg, 0), else: msg
     Logger.debug("Delegating cast message", role: state.role, message_type: message_type)
@@ -60,7 +66,7 @@ defmodule Atelier.Agent do
   end
 
   # Delegate all infos to the role-specific module
-  @impl true
+  @impl GenServer
   def handle_info(:project_finished, state) do
     # Let the module handle the message first (e.g., Clerk writes final manifest)
     case state.module.handle_info(:project_finished, state) do

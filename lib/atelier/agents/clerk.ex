@@ -3,9 +3,9 @@ defmodule Atelier.Agents.Clerk do
   Clerk agent responsible for manifest generation and project tracking.
   """
 
-  require Logger
-
   @behaviour Atelier.Agent.Worker
+
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do

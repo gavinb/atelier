@@ -3,10 +3,11 @@ defmodule Atelier.Agents.Validator do
   Validator agent responsible for syntax validation of generated code.
   """
 
-  require Logger
+  @behaviour Atelier.Agent.Worker
+
   alias Phoenix.PubSub
 
-  @behaviour Atelier.Agent.Worker
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do

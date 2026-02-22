@@ -3,9 +3,9 @@ defmodule Atelier.Agents.GitBot do
   GitBot agent responsible for auto-committing validated code.
   """
 
-  require Logger
-
   @behaviour Atelier.Agent.Worker
+
+  require Logger
 
   @spec init_state(Keyword.t()) :: map()
   def init_state(opts) do
