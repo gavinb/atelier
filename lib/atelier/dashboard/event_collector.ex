@@ -48,7 +48,7 @@ defmodule Atelier.Dashboard.EventCollector do
 
   # Server Callbacks
 
-  @impl true
+  @impl GenServer
   def init(_opts) do
     state = %{
       projects: %{},
@@ -59,7 +59,7 @@ defmodule Atelier.Dashboard.EventCollector do
     {:ok, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_cast({:register_project, project_id}, state) do
     # Subscribe to this project's topic
     Phoenix.PubSub.subscribe(Atelier.PubSub, "project:#{project_id}")
@@ -79,7 +79,7 @@ defmodule Atelier.Dashboard.EventCollector do
     {:noreply, new_state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
   end
@@ -94,7 +94,7 @@ defmodule Atelier.Dashboard.EventCollector do
   end
 
   # Handle PubSub messages from projects
-  @impl true
+  @impl GenServer
   def handle_info({:blueprint_ready, files}, state) do
     project_id = get_current_project(state)
     event = build_event(:blueprint_ready, project_id, %{file_count: length(files)})
