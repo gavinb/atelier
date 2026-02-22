@@ -1,12 +1,19 @@
 defmodule Atelier.Studio do
+  @moduledoc """
+  Entry point for starting agent teams and routing feature requests.
+  """
+
+  alias Atelier.Dashboard.EventCollector
+
   require Logger
 
+  @spec start_project(String.t()) :: :ok
   def start_project(project_id) do
     # Initialize workspace with git repository before starting agents
     Atelier.Storage.init_workspace(project_id)
 
     # Register with dashboard event collector
-    Atelier.Dashboard.EventCollector.register_project(project_id)
+    EventCollector.register_project(project_id)
 
     roles = [
       :environment,
@@ -42,6 +49,7 @@ defmodule Atelier.Studio do
     :ok
   end
 
+  @spec request_feature(String.t(), String.t()) :: :ok | nil
   def request_feature(project_id, requirement) do
     Logger.info("Feature request received",
       project_id: project_id,
