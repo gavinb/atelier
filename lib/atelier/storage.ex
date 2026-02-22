@@ -181,7 +181,12 @@ defmodule Atelier.Storage do
         case Sprites.Filesystem.write(fs, path, content) do
           :ok ->
             full_path = Path.join(@workspace_path, filename)
-            Logger.debug("File written to sprite", sprite: sprite_name(project_id), path: full_path)
+
+            Logger.debug("File written to sprite",
+              sprite: sprite_name(project_id),
+              path: full_path
+            )
+
             {:ok, full_path}
 
           {:error, reason} = error ->
@@ -190,6 +195,7 @@ defmodule Atelier.Storage do
               path: path,
               error: inspect(reason)
             )
+
             error
         end
     end
@@ -208,6 +214,7 @@ defmodule Atelier.Storage do
               path: filename,
               size: byte_size(content)
             )
+
             {:ok, content}
 
           {:error, :enoent} = error ->
@@ -215,6 +222,7 @@ defmodule Atelier.Storage do
               sprite: sprite_name(project_id),
               path: filename
             )
+
             error
 
           {:error, reason} = error ->
@@ -223,6 +231,7 @@ defmodule Atelier.Storage do
               path: filename,
               error: inspect(reason)
             )
+
             error
         end
     end
@@ -248,6 +257,7 @@ defmodule Atelier.Storage do
               sprite: sprite_name,
               error: inspect(reason)
             )
+
             {:error, reason}
         end
     end
@@ -272,6 +282,7 @@ defmodule Atelier.Storage do
           exit_code: code,
           output: output
         )
+
         {:error, {:init_failed, code, output}}
     end
   end

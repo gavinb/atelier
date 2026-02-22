@@ -38,6 +38,7 @@ defmodule Atelier.LLM do
           provider: provider,
           response_length: String.length(text)
         )
+
         text
 
       {:error, reason} ->

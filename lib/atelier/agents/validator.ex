@@ -45,7 +45,11 @@ defmodule Atelier.Agents.Validator do
 
       ".ex" ->
         Logger.debug("Running Elixir validation")
-        System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"], stderr_to_stdout: true, env: [])
+
+        System.cmd("elixirc", [full_path, "-o", "/tmp/atelier_studio/build"],
+          stderr_to_stdout: true,
+          env: []
+        )
 
       ".py" ->
         Logger.debug("Running Python validation")
