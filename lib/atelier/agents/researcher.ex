@@ -105,15 +105,15 @@ defmodule Atelier.Agents.Researcher do
     #{if related_topics != "", do: "## Related Information\n#{related_topics}\n", else: ""}
     """
 
-    result = String.trim(result)
+    trimmed = String.trim(result)
 
-    if result == "Search Query: #{query}" do
+    if trimmed == "Search Query: #{query}" do
       Logger.debug("[Researcher] No direct results from DuckDuckGo, returning query context")
 
       "Search for '#{query}' returned no direct results. The Architect should use general knowledge about this topic."
     else
-      Logger.debug("[Researcher] Found search results", result_length: String.length(result))
-      result
+      Logger.debug("[Researcher] Found search results", result_length: String.length(trimmed))
+      trimmed
     end
   end
 

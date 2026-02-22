@@ -57,14 +57,18 @@ defmodule Atelier.Agents.GitBot do
     """
 
     Logger.debug("Requesting commit message from LLM", filename: filename)
-    commit_msg = String.trim(Atelier.LLM.prompt("You are a Git expert.", prompt))
+
+    commit_msg =
+      "You are a Git expert."
+      |> Atelier.LLM.prompt(prompt)
+      |> String.trim()
+
     Logger.debug("Commit message generated", message: commit_msg)
     commit_msg
   end
 
   defp execute_git_commit(filename, project_path, commit_msg) do
-    try do
-      Logger.debug("Running git add", filename: filename)
+    Logger.debug("Running git add", filename: filename)
 
       {add_output, status1} =
         System.cmd("git", ["add", filename], cd: project_path, env: [], stderr_to_stdout: true)
@@ -94,10 +98,9 @@ defmodule Atelier.Agents.GitBot do
           commit_output: commit_output
         )
       end
-    rescue
-      e ->
-        IO.puts("❌ GitBot: Failed to commit. Is Git initialized? #{inspect(e)}")
-        Logger.error("Commit failed with exception", filename: filename, error: inspect(e))
-    end
+  rescue
+    e ->
+      IO.puts("❌ GitBot: Failed to commit. Is Git initialized? #{inspect(e)}")
+      Logger.error("Commit failed with exception", filename: filename, error: inspect(e))
   end
 end

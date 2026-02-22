@@ -222,11 +222,13 @@ defmodule Atelier.Dashboard.EventCollector do
 
   defp get_current_project(state) do
     # Return the most recently started active project
-    state.projects
-    |> Enum.filter(fn {_id, p} -> p.status in [:starting, :in_progress] end)
-    |> Enum.sort_by(fn {_id, p} -> p.started_at end, {:desc, DateTime})
-    |> List.first()
-    |> case do
+    active =
+      state.projects
+      |> Enum.filter(fn {_id, p} -> p.status in [:starting, :in_progress] end)
+      |> Enum.sort_by(fn {_id, p} -> p.started_at end, {:desc, DateTime})
+      |> List.first()
+
+    case active do
       {id, _project} -> id
       nil -> "unknown"
     end
@@ -243,7 +245,7 @@ defmodule Atelier.Dashboard.EventCollector do
   end
 
   defp add_event(state, event) do
-    events = [event | state.events] |> Enum.take(@max_events)
+    events = Enum.take([event | state.events], @max_events)
     %{state | events: events}
   end
 
