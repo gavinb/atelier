@@ -1,5 +1,9 @@
 .DS_Store
 
+# Local secrets and sprite config
+.env
+.sprite
+
 # The directory Mix will write compiled artifacts to.
 /_build/
 
