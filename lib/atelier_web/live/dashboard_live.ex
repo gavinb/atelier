@@ -7,7 +7,7 @@ defmodule AtelierWeb.DashboardLive do
 
   alias Atelier.Dashboard.EventCollector
 
-  @impl true
+  @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     if connected?(socket) do
       EventCollector.subscribe()
@@ -23,7 +23,7 @@ defmodule AtelierWeb.DashboardLive do
      )}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:dashboard_update, state}, socket) do
     {:noreply,
      assign(socket,
@@ -32,12 +32,12 @@ defmodule AtelierWeb.DashboardLive do
      )}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("select_project", %{"id" => project_id}, socket) do
     {:noreply, assign(socket, selected_project: project_id)}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-gray-900 text-gray-100">
