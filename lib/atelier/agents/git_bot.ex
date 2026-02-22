@@ -70,34 +70,34 @@ defmodule Atelier.Agents.GitBot do
   defp execute_git_commit(filename, project_path, commit_msg) do
     Logger.debug("Running git add", filename: filename)
 
-      {add_output, status1} =
-        System.cmd("git", ["add", filename], cd: project_path, env: [], stderr_to_stdout: true)
+    {add_output, status1} =
+      System.cmd("git", ["add", filename], cd: project_path, env: [], stderr_to_stdout: true)
 
-      if status1 != 0 do
-        Logger.warning("Git add had non-zero status", output: add_output, status: status1)
-      end
+    if status1 != 0 do
+      Logger.warning("Git add had non-zero status", output: add_output, status: status1)
+    end
 
-      Logger.debug("Running git commit", message: commit_msg)
+    Logger.debug("Running git commit", message: commit_msg)
 
-      {commit_output, status2} =
-        System.cmd("git", ["commit", "-m", commit_msg],
-          cd: project_path,
-          env: [],
-          stderr_to_stdout: true
-        )
+    {commit_output, status2} =
+      System.cmd("git", ["commit", "-m", commit_msg],
+        cd: project_path,
+        env: [],
+        stderr_to_stdout: true
+      )
 
-      if status1 == 0 and status2 == 0 do
-        IO.puts("🚀 GitBot: Committed #{filename} with message: \"#{commit_msg}\"")
-        Logger.info("File successfully committed", filename: filename, message: commit_msg)
-      else
-        Logger.error("Git commands failed",
-          filename: filename,
-          add_status: status1,
-          add_output: add_output,
-          commit_status: status2,
-          commit_output: commit_output
-        )
-      end
+    if status1 == 0 and status2 == 0 do
+      IO.puts("🚀 GitBot: Committed #{filename} with message: \"#{commit_msg}\"")
+      Logger.info("File successfully committed", filename: filename, message: commit_msg)
+    else
+      Logger.error("Git commands failed",
+        filename: filename,
+        add_status: status1,
+        add_output: add_output,
+        commit_status: status2,
+        commit_output: commit_output
+      )
+    end
   rescue
     e ->
       IO.puts("❌ GitBot: Failed to commit. Is Git initialized? #{inspect(e)}")
