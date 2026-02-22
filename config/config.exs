@@ -37,7 +37,13 @@ config :logger, :console,
     :agent_count,
     :requirement_length,
     :sprite,
-    :response
+    :response,
+    :sandbox,
+    :size,
+    :timeout,
+    :query,
+    :result_length,
+    :hint
   ],
   colors: [enabled: true, info: :green, debug: :cyan, error: :red]
 
