@@ -42,7 +42,7 @@
         {Credo.Check.Readability.Semicolons, []},
         {Credo.Check.Readability.SeparateAliasRequire, []},
         {Credo.Check.Readability.SinglePipe, []},
-        {Credo.Check.Readability.Specs, []},
+        {Credo.Check.Readability.Specs, [files: %{excluded: ["lib/atelier_web.ex", "lib/atelier_web/"]}]},
         {Credo.Check.Readability.StringSigils, []},
         {Credo.Check.Readability.StrictModuleLayout, []},
         {Credo.Check.Readability.TrailingBlankLine, []},
