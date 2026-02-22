@@ -1,9 +1,20 @@
 defmodule Mix.Tasks.Atelier.Run do
-  use Mix.Task
-  require Logger
-
   @shortdoc "Runs a studio project from the command line"
 
+  @moduledoc """
+  Runs an Atelier studio project from the command line.
+
+  ## Usage
+
+      mix atelier.run "A REST API for managing todos"
+  """
+
+  use Mix.Task
+
+  require Logger
+
+  @impl Mix.Task
+  @spec run([String.t()]) :: :ok
   def run([requirement]) do
     # 1. Start the application
     Application.ensure_all_started(:atelier)

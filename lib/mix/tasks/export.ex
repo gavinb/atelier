@@ -1,4 +1,6 @@
 defmodule Mix.Tasks.Export do
+  @shortdoc "Export source code as a zip file"
+
   @moduledoc """
   Export the source code as a zip file, excluding build artifacts and dependencies.
 
@@ -25,8 +27,7 @@ defmodule Mix.Tasks.Export do
 
   use Mix.Task
 
-  @shortdoc "Export source code as a zip file"
-
+  @spec run([String.t()]) :: :ok
   @impl Mix.Task
   def run(args) do
     filename = List.first(args) || "atelier-source.zip"
